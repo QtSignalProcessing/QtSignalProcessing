@@ -755,3 +755,57 @@ void MainWindow::displayAliasing(bool i)
      resetSp();
      vresetSp();
 }
+
+void MainWindow::wheelEvent(QWheelEvent *e)
+{
+    if(e->pos().x()<width()*0.4)
+    {
+        if(e->delta()>0)
+        {
+            _OrgWave->getGlwidget()->hIncrease();
+            _SampledWave->getGlwidget()->hIncrease();
+        }
+        else
+        {
+            _OrgWave->getGlwidget()->hDecrease();
+            _SampledWave->getGlwidget()->hDecrease();
+        }
+    }
+    else if(e->pos().x()>width()*0.5 && e->pos().x()<width()*0.8)
+    {
+        if(e->delta()>0)
+        {
+            _DisSpec->getWidget()->hIncrease();
+            _ConSpec->getWidget()->hIncrease();
+        }
+        else
+        {
+            _DisSpec->getWidget()->hDecrease();
+            _ConSpec->getWidget()->hDecrease();
+        }
+    }
+
+}
+
+void MainWindow::mouseMoveEvent(QMouseEvent *event)
+{
+    if(event->buttons() & Qt::LeftButton)
+    {
+        if(event->x()<width()*0.4)
+        {
+            int p = event->x();
+            p = (float)p/_OrgWave->hSc->width() * 100 -50;
+            bindWaveScroll(p);
+        }
+        else if(event->pos().x()>width()*0.5 && event->pos().x()<width()*0.8)
+        {
+            int p = event->x()-width()*0.5;
+
+            p = (float)p/_ConSpec->hSc->width() * 100 -50;
+
+            bindSpecScroll(p);
+        }
+    }
+
+
+}
