@@ -32,6 +32,12 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(main);
     createWidget(main);
     this->show();
+    if(loadingFailed)
+    {
+        QMessageBox error;
+        error.setText("Default audio file open failed, and sin signal with noise will be shown");
+        error.exec();
+    }
 }
 
 void MainWindow::initializeVar()
