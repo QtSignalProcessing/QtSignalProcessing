@@ -1,24 +1,26 @@
-
-#include <QtGui>
 #include "mainwindow.h"
 
-#include<iostream>
-#include<QGridLayout>
-#include <QSizePolicy>
-#include<iostream>
-#include<QLabel>
-#include<QToolButton>
-#include <QDebug>
-#include<QFileDialog>
-#include<QMessageBox>
-#include <QVBoxLayout>
+#include "plot.h"
+#include "utilities.h"
+#include "audiohandle.h"
+#include "plotfilter.h"
 
-#include<QHBoxLayout>
-#include<QFont>
-#include <samplerate.h>
-#include <math.h>
-using namespace Phonon;
-using namespace std;
+#include <QMouseEvent>
+#include <QComboBox>
+#include <QSpinBox>
+#include <QCheckBox>
+#include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
+#include <QMenuBar>
+#include <QFileDialog>
+#include <QApplication>
+
+#if QT_VERSION < 0x050000
+#include <phonon/MediaObject>
+#else
+#include <QMediaPlayer>
+#endif
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),buf1(NULL),sampleData(NULL),qData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
@@ -74,7 +76,7 @@ void MainWindow::initializeVar()
             buf1[i] = (sin(i/1000.0) + sin(i))/2.0;
         loadingFailed = true;
         fileName=QDir::tempPath()+"/ddd";
-        ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
+        ria->writeToWave(buf1,fileName.toLatin1().data(),sr,num);
     }
 }
 
@@ -173,7 +175,6 @@ void MainWindow::createWidget(QWidget *main)
     {
         _trueBits = utilities->computeTrueBits();
     }
-    cout<<_trueBits<<endl;
     bitBox=new QSpinBox(main);
     bitBox->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
     bitBox->setValue(_trueBits);
@@ -294,34 +295,52 @@ MainWindow::~MainWindow()
 
 void MainWindow::play()
 {
-    MediaObject *obj;
-    obj=Phonon::createPlayer(Phonon::MusicCategory,
-                             Phonon::MediaSource(fileName.toAscii().data()));
-    obj->play();
+#if QT_VERSION < 0x050000
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName));
+#else
+  QMediaPlayer* player = new QMediaPlayer();
+  player->setMedia(QUrl::fromLocalFile(fileName));
+#endif
+  player->play();
 }
 
 void MainWindow::playSample(){
-    MediaObject *obj;
-    if(this->filename==NULL){
-     obj=Phonon::createPlayer(Phonon::MusicCategory,
-                             Phonon::MediaSource(fileName.toAscii().data()));
-    }
-    else{
-        obj=Phonon::createPlayer(Phonon::MusicCategory,
-                                Phonon::MediaSource(this->filename));
-    }
-    obj->play();
+#if QT_VERSION < 0x050000
+  Phonon::MediaObject* player;
+  if (this->filename == NULL)
+  {
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName));
+  }
+  else
+  {
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(filename));
+  }
+#else
+  QMediaPlayer* player = new QMediaPlayer();
+  if (this->filename == NULL)
+  {
+      player->setMedia(QUrl::fromLocalFile(fileName));
+  }
+  else
+  {
+        player->setMedia(QUrl::fromLocalFile(this->filename));
+  }
+#endif
+  player->play();
 }
 
 void MainWindow::playfiltered()
 {
-    if(fileName1!=NULL)
-    {
-        MediaObject *obj;
-        obj=Phonon::createPlayer(Phonon::MusicCategory,
-                                 Phonon::MediaSource(fileName1.toAscii().data()));
-        obj->play();
-    }
+  if(fileName1!=NULL)
+  {
+#if QT_VERSION < 0x050000
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName1));
+#else
+  QMediaPlayer* player = new QMediaPlayer();
+  player->setMedia(QUrl::fromLocalFile(fileName1));
+#endif
+  player->play();
+  }
 }
 
 void MainWindow::open()
@@ -372,7 +391,7 @@ void MainWindow::createMenus()
 //load in the selected audio file(need to add the filtering of the file types)
 void MainWindow::loadFile(const QString &fileName)
 {
-    char *s=fileName.toAscii().data();
+    char *s = fileName.toLatin1().data();
     if(ria!=NULL)
         delete ria;
     ria = new AudioHandle(s);

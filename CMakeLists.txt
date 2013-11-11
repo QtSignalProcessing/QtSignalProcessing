@@ -1,0 +1,46 @@
+project(SignalProcessing)
+
+cmake_minimum_required(VERSION 2.8.8)
+
+#####OPTIONS#########
+option(QT5_BUILD "Build powerbike using the Qt5 framework" FALSE)
+#####END OPTIONS#####
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# Instruct CMake to run moc automatically when needed.
+set(CMAKE_AUTOMOC ON)
+
+set(SignalProcessing_SRCS
+  src/audiohandle.cpp
+  src/axislabel.cpp
+  src/cheby1.cpp
+  src/glbase.cpp
+  src/glospectrum.cpp
+  src/glsw.cpp
+  src/iir.cpp
+  src/main.cpp
+  src/mainwindow.cpp
+  src/plot.cpp
+  src/plotfilter.cpp
+  src/utilities.cpp
+)
+
+if (QT5_BUILD)
+  find_package(Qt5Core REQUIRED)
+endif()
+
+add_executable(SignalProcessing ${SignalProcessing_SRCS})
+
+if (Qt5Core_FOUND)
+  qt5_use_modules(SignalProcessing Widgets OpenGL Multimedia)
+else(Qt5Core_FOUND)
+  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGl) 
+  find_package(Phonon REQUIRED)
+  include(${QT_USE_FILE})
+  target_link_libraries(SignalProcessing ${QT_LIBRARIES} phonon)
+endif(Qt5Core_FOUND)
+
+target_link_libraries(SignalProcessing GL sndfile fftw3 samplerate)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++0x")
