@@ -4,11 +4,10 @@
 #
 #-------------------------------------------------
 
-QT += core gui opengl
+QT += core gui opengl phonon
 
 TARGET = SignalProcessing
 TEMPLATE = app
-
 
 SOURCES += main.cpp\
         mainwindow.cpp \
@@ -34,9 +33,13 @@ HEADERS  += mainwindow.h \
     utilities.h \
     audiohandle.h \
     glbase.h
+
+
 unix|win32: LIBS += -lsndfile
-
 unix|win32: LIBS += -lfftw3
-QT += phonon
-
 unix|win32: LIBS += -lsamplerate
+
+OTHER_FILES +=
+
+
+
