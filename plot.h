@@ -29,6 +29,7 @@ signals:
 
 public slots:
  void resetw();
+
 private:
  void initialCommonConp(bool);
 

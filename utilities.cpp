@@ -95,7 +95,7 @@ int Utilities::computeTrueBits()
         setBit(i);
         getQuantize();
         double error = computeError();
-        if(error < 10e-5)
+        if(error < 10e-6)
         {
             _trueBits = i;
             return i;

@@ -106,7 +106,7 @@ float* AxisLabel::getLabels(bool spec)
     return labels;
 }
 
-float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, int &hshift, int &width, float &hIn)
+float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, double &hshift, int &width, float &hIn)
 {
     if(cord != NULL)
         free( cord );
@@ -119,7 +119,7 @@ float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, 
 
 }
 
-float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, int &hshift, int &width, float &hIn,bool spec)
+float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, double &hshift, int &width, float &hIn,bool spec)
 {
     if(spec)
     {

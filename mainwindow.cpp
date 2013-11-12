@@ -22,7 +22,7 @@ using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),buf1(NULL),sampleData(NULL),qData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
-      alreadyFiltered(false),_trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false)
+      alreadyFiltered(false),_trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL)
 {
     createActions();
     createMenus();
@@ -60,8 +60,11 @@ void MainWindow::initializeVar()
     {
         currentNum=num;
         loadingFailed = false;
+        if(_orgData!=NULL)
+            free(_orgData);
+        _orgData = (float*)malloc(num*sizeof(float));
         for(int i =0; i < currentNum; i++)
-            buf1[i] =(buf1[i] + (float)sin(2*i)/5.0)/1.2;
+            _orgData[i] =buf1[i] ;
     }
     else
     {
@@ -71,7 +74,10 @@ void MainWindow::initializeVar()
         buf1 = (float*)malloc(sizeof(float)*num);
         sr = 11025;
         for(int i = 0; i< 20000;i++)
-            buf1[i] = (sin(i/1000.0) + sin(i))/2.0;
+            buf1[i] = (sin(i/10.0)+sin(i))/2;
+        _orgData = (float*)malloc(num*sizeof(float));
+        for(int i =0; i < currentNum; i++)
+            _orgData[i] =buf1[i] ;
         loadingFailed = true;
         fileName=QDir::tempPath()+"/ddd";
         ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
@@ -111,8 +117,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_DisSpec->vReset,SIGNAL(clicked()),this,SLOT(vresetSp()));
     connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
     connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
-    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setHshift(int)));
-    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setHshift(int)));
+    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setHshift(double)));
+    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setHshift(double)));
     connect(_SampledWave->vSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setVshift(int)));
     connect(_OrgWave->vSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setVshift(int)));
     connect(_OrgWave->vReset,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(resetV()));
@@ -127,8 +133,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_SampledWave->hPlus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hIncrease()));
     connect(_OrgWave->hMinus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(hDecrease()));
     connect(_SampledWave->hMinus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hDecrease()));
-    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setHshift(int)));
-    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setHshift(int)));
+    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setHshift(double)));
+    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setHshift(double)));
     connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setVshift(int)));
     connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setVshift(int)));
     connect(_ConSpec->vPlus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(vIncrease()));
@@ -173,7 +179,6 @@ void MainWindow::createWidget(QWidget *main)
     {
         _trueBits = utilities->computeTrueBits();
     }
-    cout<<_trueBits<<endl;
     bitBox=new QSpinBox(main);
     bitBox->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
     bitBox->setValue(_trueBits);
@@ -230,6 +235,14 @@ void MainWindow::createWidget(QWidget *main)
     samplerange->setLayout(h1);
     QGridLayout* v1=new QGridLayout;
     QLabel* filterLabel=new QLabel("Apply anti-aliasing filter",this);
+    _addNoise = new QCheckBox("Add sin noise to signal",this);
+    connect(_addNoise,SIGNAL(toggled(bool)),this,SLOT(enableNoiseSelect(bool)));
+    _selectNoise = new QComboBox(this);
+    _selectNoise->setEnabled(false);
+
+    texts.clear();
+    texts<<QString::number(sr/4)<<QString::number(sr/2)<<QString::number(3*sr/4);
+    _selectNoise->addItems(texts);
     filterLabel->setFont(font);
     QWidget* ffiltter =new QWidget(main);
     _selFilter=new QCheckBox("Apply filter",main);
@@ -237,9 +250,14 @@ void MainWindow::createWidget(QWidget *main)
     connect(_selFilter,SIGNAL(clicked(bool)),this,SLOT(showFilter(bool)));
     connect(_showAliasing,SIGNAL(clicked(bool)),this,SLOT(displayAliasing(bool)));
     v1->setSpacing(0);
-    v1->addWidget(filterLabel,0,0);
-    v1->addWidget(_selFilter,1,0);
-    v1->addWidget(_showAliasing,2,0);
+    QVBoxLayout* noiseVBoxLayout = new QVBoxLayout;
+    noiseVBoxLayout->addWidget(_addNoise);
+    noiseVBoxLayout->addWidget(_selectNoise);
+    connect(_selectNoise,SIGNAL(currentIndexChanged(int)),this,SLOT(noiseAddfunc(int)));
+    v1->addLayout(noiseVBoxLayout,0,0);
+    v1->addWidget(filterLabel,1,0);
+    v1->addWidget(_selFilter,2,0);
+    v1->addWidget(_showAliasing,3,0);
     ffiltter->setLayout(v1);
     ConpLayout->addWidget(ffiltter,0,3);
     vLayout->setSpacing(0);
@@ -412,9 +430,20 @@ void MainWindow::loadFile(const QString &fileName)
    bitBox->setValue(_trueBits);
    showFilter(false);
    resetEverything();
-   QMessageBox error;
-   error.setText("Default audio file open failed, and sin signal with noise will be shown");
-   error.exec();
+   if(loadingFailed)
+   {
+       QMessageBox error;
+       error.setText("Default audio file open failed, and sin signal with noise will be shown");
+       error.exec();
+   }
+   _addNoise->setChecked(false);
+   _selectNoise->setEnabled(false);
+   _selectNoise->blockSignals(true);
+   _selectNoise->clear();
+   texts.clear();
+   texts<<QString::number(sr/4)<<QString::number(sr/2)<<QString::number(3*sr/4);
+   _selectNoise->addItems(texts);
+   _selectNoise->blockSignals(false);
 }
 void MainWindow::loadOrgwave()
 {
@@ -758,15 +787,26 @@ void MainWindow::displayAliasing(bool i)
 
 void MainWindow::wheelEvent(QWheelEvent *e)
 {
-    if(e->pos().x()<width()*0.4)
+    if(e->pos().x() > _OrgWave->pos().x() && e->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
     {
         if(e->delta()>0)
         {
+            double p = e->pos().x();
+            p = (float)p/_OrgWave->hSc->width() * 100 -50;
+
+             qDebug()<<_OrgWave->pos().x()+_OrgWave->width();
+             qDebug()<<e->pos().x();
+            _OrgWave->getGlwidget()->setHshift(p);
+            _SampledWave->getGlwidget()->setHshift(p);
             _OrgWave->getGlwidget()->hIncrease();
             _SampledWave->getGlwidget()->hIncrease();
         }
         else
         {
+            double p = e->x();
+            p = (float)p/_OrgWave->hSc->width() * 100 -50;
+            _OrgWave->getGlwidget()->setHshift(p);
+            _SampledWave->getGlwidget()->setHshift(p);
             _OrgWave->getGlwidget()->hDecrease();
             _SampledWave->getGlwidget()->hDecrease();
         }
@@ -791,11 +831,14 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event)
 {
     if(event->buttons() & Qt::LeftButton)
     {
-        if(event->x()<width()*0.4)
+        if(event->pos().x() > _OrgWave->pos().x() && event->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
         {
-            int p = event->x();
-            p = (float)p/_OrgWave->hSc->width() * 100 -50;
-            bindWaveScroll(p);
+            double p = event->pos().x();
+            p = (float)p/_OrgWave->width() * 100 -50;
+            _OrgWave->getGlwidget()->setHshift(p);
+
+            _SampledWave->getGlwidget()->setHshift(p);
+          //  bindWaveScroll(p);
         }
         else if(event->pos().x()>width()*0.5 && event->pos().x()<width()*0.8)
         {
@@ -806,6 +849,58 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event)
             bindSpecScroll(p);
         }
     }
+}
 
+void MainWindow::enableNoiseSelect(bool i)
+{
+    _selectNoise->setEnabled(i);
+    if(i)
+    {
+        noiseAddfunc(_selectNoise->currentIndex());
+    }
+    if(!i)
+    {
+        for(int i =0; i < num; i++)
+            buf1[i] =_orgData[i];
+        utilities->updateUtilites(buf1,num);
+        fileName=QDir::tempPath()+"/ddd";
+        ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
+        _ConSpec->getWidget()->updateGL();
+         nonIntSr(sampleRateSelect->currentText());
+      _DisSpec->getWidget()->updateGL();
+        _OrgWave->getGlwidget()->updateGL();
 
+        _SampledWave->getGlwidget()->updateGL();
+    }
+
+}
+
+void MainWindow::noiseAddfunc(int index)
+{
+    float freq = 0;
+    if(index == -1 || index == 0)
+    {
+       freq = 0.25*M_PI;
+    }
+    else if(index == 1)
+    {
+        freq = 0.5 *M_PI;
+    }
+    else if(index == 2)
+    {
+        freq = 0.75 * M_PI;
+    }
+
+    for(int i =0; i < num; i++)
+        buf1[i] =(_orgData[i] + (float)sin(freq*i)/5.0)/1.2;
+    utilities->updateUtilites(buf1,num);
+    fileName=QDir::tempPath()+"/ddd";
+    filename = fileName;
+    ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
+     nonIntSr(sampleRateSelect->currentText());
+    _ConSpec->getWidget()->updateGL();
+  _DisSpec->getWidget()->updateGL();
+    _OrgWave->getGlwidget()->updateGL();
+
+    _SampledWave->getGlwidget()->updateGL();
 }

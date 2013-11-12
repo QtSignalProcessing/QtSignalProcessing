@@ -64,6 +64,10 @@ public:
     void setBits(int bits);
     void frozenScaling(bool i);
     void displayAliasing(bool i);
+    void wheelEvent(QWheelEvent *);
+    void mouseMoveEvent(QMouseEvent *);
+    void enableNoiseSelect(bool i);
+    void noiseAddfunc(int index);
 
 private:
     int bits;
@@ -116,6 +120,9 @@ private:
     QCheckBox* _showSampleRange;
     QCheckBox* _showOnePeriod;
     bool loadingFailed;
+    QCheckBox* _addNoise;
+    QComboBox* _selectNoise;
+    float* _orgData;
 };
 
 #endif // MAINWINDOW_H

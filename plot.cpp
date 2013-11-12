@@ -1,6 +1,7 @@
 #include "plot.h"
 
 #include<QLabel>
+#include<QWheelEvent>
 
 #include<iostream>
 
@@ -106,7 +107,7 @@ void plot::initialCommonConp(bool wave)
         connect(vPlus,SIGNAL(clicked()),widget,SLOT(vIncrease()));
         connect(vMinus,SIGNAL(clicked()),widget,SLOT(vDecrease()));
         connect(hPlus,SIGNAL(clicked()),widget,SLOT(hIncrease()));
-        connect(hMinus,SIGNAL(clicked()),widget,SLOT(hDecrease()));
+        connect(hMinus,SIGNAL(clicked()),widget,SLOT(hDecrease()));    
     }
     else
     {
@@ -146,3 +147,4 @@ void plot::initialCommonConp(bool wave)
     ConpLayout->addWidget(vMinus,7,14);
     setLayout(ConpLayout);
 }
+

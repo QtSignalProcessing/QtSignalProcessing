@@ -11,8 +11,8 @@ public:
     float* getLabels(bool spec);
     void updateMaxMin(double max,double min);
     float* getYcord(float yscale,float vIn,float yshift,float vshift);
-    float* getCord(float &time, int &number,float &xScale,float &xShift, int &hshift ,int &width,float &hIn);
-    float* getCord(float &time, int &number,float &xScale,float &xShift, int &hshift ,int &width,float &hIn,bool spec);
+    float* getCord(float &time, int &number,float &xScale,float &xShift, double &hshift ,int &width,float &hIn);
+    float* getCord(float &time, int &number,float &xScale,float &xShift, double &hshift ,int &width,float &hIn,bool spec);
     ~AxisLabel();
      int size;
      float steps;

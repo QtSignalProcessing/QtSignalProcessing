@@ -159,9 +159,9 @@ void GLBase::hDecrease()
     }
 }
 
-void GLBase::setHshift(int shift)
+void GLBase::setHshift(double shift)
 {
-   int len=(number-1)/(xScaleW1*hIn)+(width/2-xShiftW1/2-(number/2)/(xScaleW1*hIn));
+   double len=(double)(number-1)/(xScaleW1*hIn)+(width/2-xShiftW1/2-(number/2)/(xScaleW1*hIn));
    this->hshift=shift/50.0*(len-width+xShiftW1);
    orgShift=shift;
    updateGL();

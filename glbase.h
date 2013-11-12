@@ -41,7 +41,7 @@ public:
     double vIn;
     double vDe;
     float hIn;
-    int hshift;
+    double hshift;
     int vshift;
     int bits;
     int L;
@@ -74,15 +74,15 @@ protected:
     void resizeGL(int width, int height);
 
 public slots:
-    void vIncrease();
-    void vDecrease();
-    void hIncrease();
-    void hDecrease();
-    void setHshift(int shift);
-    void setVshift(int shift);
-    void resetV();
-    void resetH();
-    void setSampleRate(int sr);
+    virtual void vIncrease();
+    virtual void vDecrease();
+    virtual void hIncrease();
+    virtual void hDecrease();
+    virtual void setHshift(double shift);
+    virtual void setVshift(int shift);
+    virtual void resetV();
+    virtual void resetH();
+    virtual void setSampleRate(int sr);
     void setBits(int bits);
     void nonIntSr(QString s);
 };
