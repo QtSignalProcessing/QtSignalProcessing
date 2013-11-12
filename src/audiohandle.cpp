@@ -55,12 +55,12 @@ void AudioHandle::writeToWave(float *data, float sr,int size,bool onlyfiltered)
 
     if(!onlyfiltered)
     {
-        filename=QDir::tempPath().toAscii().data();
+        filename=QDir::tempPath().toLatin1().data();
         strcat(filename,"/tmp0");
     }
     else
     {
-        filename1=QDir::tempPath().toAscii().data();
+        filename1=QDir::tempPath().toLatin1().data();
         strcat(filename1,"/tmp1");
     }
     if(strlen(filename)>5||strlen(filename1)){
