@@ -49,47 +49,6 @@ float* AudioHandle::getData(int num_items,int& num)
     return buf1;
 }
 
-void AudioHandle::writeToWave(float *data, float sr,int size,bool onlyfiltered)
-{
-    this->onlyfiltered = onlyfiltered;
-
-    if(!onlyfiltered)
-    {
-        filename=QDir::tempPath().toLatin1().data();
-        strcat(filename,"/tmp0");
-    }
-    else
-    {
-        filename1=QDir::tempPath().toLatin1().data();
-        strcat(filename1,"/tmp1");
-    }
-    if(strlen(filename)>5||strlen(filename1)){
-    SNDFILE   *outfile ;
-    SF_INFO      sfinfo ;
-    sfinfo.channels=1;
-    sfinfo.samplerate=sr;
-    sfinfo.format=SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-    if(!onlyfiltered)
-    {
-        if (! (outfile = sf_open (filename, SFM_WRITE,&sfinfo)))
-        {   printf ("Not able to open output file %s.\n", filename) ;
-            sf_perror (NULL) ;
-            return   ;
-            } ;
-    }
-    else
-    {
-        if (! (outfile = sf_open (filename1, SFM_WRITE,&sfinfo)))
-        {   printf ("Not able to open output file %s.\n", filename1) ;
-            sf_perror (NULL) ;
-            return   ;
-            } ;
-    }
-    sf_write_float (outfile, data, size) ;
-    sf_close(outfile);
-}
-}
-
 void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
 {
 
@@ -105,13 +64,6 @@ void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
         } ;
     sf_write_float (outfile, data, size) ;
     sf_close(outfile);
-}
-
-char* AudioHandle::getFilename()
-{
-    if(!onlyfiltered)
-        return filename;
-    return filename1;
 }
 
 float* AudioHandle::triangularMagnitude(float *data,int size)

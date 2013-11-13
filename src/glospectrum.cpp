@@ -810,7 +810,7 @@ void GLOSpectrum::plotXAxis()
     xLabels = xlabel->getLabels(true);
     int n = number;
     int numOftick = xlabel->size;
-    xCor = xlabel->getCord(xMax,  n,xScaleW1,xShiftW1, hshift, width,hIn,true);
+    xCor = xlabel->getCord(xMax,  n,xScaleW1,xShiftW1, hshift, width,hIn);
     glBegin(GL_LINES);
     for(int i=0;i<numOftick;i++)
     {

@@ -85,6 +85,7 @@ public slots:
     virtual void setSampleRate(int sr);
     void setBits(int bits);
     void nonIntSr(QString s);
+    virtual void intToDouble(int b);
 };
 
 #endif // GLBASE_H

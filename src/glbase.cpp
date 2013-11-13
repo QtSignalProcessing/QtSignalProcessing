@@ -277,3 +277,8 @@ void GLBase::updateLabel(double max, double min)
 {
      xlabel->updateMaxMin(max,min);
 }
+
+void GLBase::intToDouble(int b)
+{
+   setHshift(b);
+}

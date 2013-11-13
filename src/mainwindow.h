@@ -94,8 +94,6 @@ class MainWindow : public QMainWindow
       void aafilter();
       void getFilterdata();
       void initializeVar();
-      QString fileName;
-      QString fileName1;
       QMenu *fileMenu;
       QMenu *helpMenu;
       QAction *openAct;
@@ -104,9 +102,7 @@ class MainWindow : public QMainWindow
       QAction *aboutQtAct;
       AudioHandle *ria;
       QWidget *main;
-      QString filename;
       QComboBox *sampleRateSelect;
-      bool onlyfiltered;
       QCheckBox* show2Spec;
       QCheckBox* conFirst;
       QCheckBox* disFirst;
@@ -125,6 +121,9 @@ class MainWindow : public QMainWindow
 	  QCheckBox* _addNoise;
       QComboBox* _selectNoise;
       float* _orgData;
+      QString _orgFileName;
+      QString _sampleFileName;
+      QString _filteredFileName;
 };
 
 #endif // MAINWINDOW_H

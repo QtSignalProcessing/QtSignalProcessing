@@ -18,16 +18,13 @@ public:
     int getSamplerate();
     int getChannel();
     float* getData(int num_items,int &num);
-    void writeToWave(float* data,float sr,int size,bool onlyfiltered);
+
     void writeToWave(float* data,char* filename,float sr,int size);
-    char* getFilename();
+
     float* triangularMagnitude(float* data,int size);
 private:
     float *buf1;
-    bool onlyfiltered;
-    char* filename1;
     int frame,samplerate,channel;
-    char* filename;
     float* _triangularWave;
 };
 

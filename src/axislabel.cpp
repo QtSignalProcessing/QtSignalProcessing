@@ -106,7 +106,7 @@ float* AxisLabel::getLabels(bool spec)
     return labels;
 }
 
-float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, double &hshift, int &width, float &hIn)
+float* AxisLabel::getCord(float time, int number,float xScale,float xShift, double hshift, int width, float hIn)
 {
     if(cord != NULL)
         free( cord );
@@ -117,22 +117,6 @@ float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, 
     }
     return cord;
 
-}
-
-float* AxisLabel::getCord(float &time, int &number,float &xScale,float &xShift, double &hshift, int &width, float &hIn,bool spec)
-{
-    if(spec)
-    {
-    }
-    if(cord != NULL)
-        free( cord );
-    cord = ( float* )malloc( sizeof( float ) * (size ) );
-
-    for( int i = 0; i < size; i++ )
-    {
-        cord[i]=(labels[i] / time * number)/(xScale*hIn)-hshift+((width-xShift)/2-(number/2)/(xScale*hIn))+xShift;
-    }
-    return cord;
 }
 
 void AxisLabel::setMaxNumSteps(int maxNumSteps)

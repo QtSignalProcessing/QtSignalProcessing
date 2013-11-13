@@ -24,12 +24,13 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),buf1(NULL),sampleData(NULL),qData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
-      alreadyFiltered(false),_trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL)
+      alreadyFiltered(false),_trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL),
+      _orgFileName(),_sampleFileName(),_filteredFileName()
 {
     createActions();
     createMenus();
     ria = new AudioHandle(QString("helloDSP.wav").toStdString().c_str());
-    fileName = "helloDSP.wav";
+    _orgFileName = "helloDSP.wav";
     main=new QWidget(this);
     this->setCentralWidget(main);
     createWidget(main);
@@ -76,13 +77,13 @@ void MainWindow::initializeVar()
         buf1 = (float*)malloc(sizeof(float)*num);
         sr = 11025;
         for(int i = 0; i< 20000;i++)
-            buf1[i] = (sin(i/10.0)+sin(i))/2;
+            buf1[i] = (sin(i/1000.0)+sin(i))/2;
         _orgData = (float*)malloc(num*sizeof(float));
         for(int i =0; i < currentNum; i++)
             _orgData[i] =buf1[i] ;
         loadingFailed = true;
-        fileName=QDir::tempPath()+"/ddd";
-        ria->writeToWave(buf1,fileName.toLatin1().data(),sr,num);
+        _orgFileName=QDir::tempPath()+"/tmp.wav";
+        ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
     }
 }
 
@@ -119,8 +120,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_DisSpec->vReset,SIGNAL(clicked()),this,SLOT(vresetSp()));
     connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
     connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
-    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setHshift(double)));
-    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setHshift(double)));
+    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(intToDouble(int)));
+    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(intToDouble(int)));
     connect(_SampledWave->vSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setVshift(int)));
     connect(_OrgWave->vSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setVshift(int)));
     connect(_OrgWave->vReset,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(resetV()));
@@ -135,8 +136,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_SampledWave->hPlus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hIncrease()));
     connect(_OrgWave->hMinus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(hDecrease()));
     connect(_SampledWave->hMinus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hDecrease()));
-    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setHshift(double)));
-    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setHshift(double)));
+    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(intToDouble(int)));
+    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(intToDouble(int)));
     connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setVshift(int)));
     connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setVshift(int)));
     connect(_ConSpec->vPlus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(vIncrease()));
@@ -315,10 +316,10 @@ MainWindow::~MainWindow()
 void MainWindow::play()
 {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  player->setMedia(QUrl::fromLocalFile(fileName));
+  player->setMedia(QUrl::fromLocalFile(_orgFileName));
 #endif
   player->play();
 }
@@ -326,23 +327,23 @@ void MainWindow::play()
 void MainWindow::playSample(){
 #if QT_VERSION < 0x050000
   Phonon::MediaObject* player;
-  if (this->filename == NULL)
+  if (_sampleFileName == NULL)
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName));
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
   }
   else
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(filename));
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_sampleFileName));
   }
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  if (this->filename == NULL)
+  if (_sampleFileName == NULL)
   {
-      player->setMedia(QUrl::fromLocalFile(fileName));
+      player->setMedia(QUrl::fromLocalFile(_orgFileName));
   }
   else
   {
-        player->setMedia(QUrl::fromLocalFile(this->filename));
+        player->setMedia(QUrl::fromLocalFile(_sampleFileName));
   }
 #endif
   player->play();
@@ -350,13 +351,13 @@ void MainWindow::playSample(){
 
 void MainWindow::playfiltered()
 {
-  if(fileName1!=NULL)
+  if(_filteredFileName!=NULL)
   {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(fileName1));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_filteredFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  player->setMedia(QUrl::fromLocalFile(fileName1));
+  player->setMedia(QUrl::fromLocalFile(_filteredFileName));
 #endif
   player->play();
   }
@@ -364,10 +365,10 @@ void MainWindow::playfiltered()
 
 void MainWindow::open()
 {
-        fileName = QFileDialog::getOpenFileName(this);
-        this->filename=fileName;
-        if (!fileName.isEmpty())
-            loadFile(fileName);
+        _orgFileName = QFileDialog::getOpenFileName(this);
+
+        if (!_orgFileName.isEmpty())
+            loadFile(_orgFileName);
 }
 
 void MainWindow::about()
@@ -508,8 +509,6 @@ void MainWindow::updateFilter()
 {
     _FilterWidget->getWidget()->resetCommon();
     _FilterWidget->getWidget()->resetSpec(buf1,num,sr);
-
-
     QStringList texts;
     if(sr==11025)
     {
@@ -585,9 +584,10 @@ void MainWindow::showFilter(bool i)
         utilities->setFilterData(filterData);
         sampleData = utilities->getSampleData(false);
         _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
+        // void writeToWave(float* data,char* filename,float sr,int size);
         _SampledWave->getGlwidget()->plotData=sampleData;
-        ria->writeToWave(sampleData,sr*L/down,currentNum,false);
-        this->filename =QString::fromStdString(ria->getFilename());
+        _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
         _SampledWave->getGlwidget()->updateGL();
         _DisSpec->getWidget()->plotData=sampleData;
         _DisSpec->getWidget()->setL(L,currentNum,down,true);
@@ -608,8 +608,8 @@ void MainWindow::showFilter(bool i)
             sampleData = utilities->getSampleData(true);
         }
          _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
-        ria->writeToWave(sampleData,sr*L/down,currentNum,false);
-        this->filename =QString::fromStdString(ria->getFilename());
+          _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
         _SampledWave->getGlwidget()->plotData=sampleData;
         _SampledWave->getGlwidget()->updateGL();
         _DisSpec->getWidget()->plotData=sampleData;
@@ -650,9 +650,8 @@ void MainWindow::nonIntSr(QString s)
     sampleData = utilities->getSampleData(true);
     _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
     _SampledWave->getGlwidget()->plotData=sampleData;
-    onlyfiltered = false;
-    ria->writeToWave(sampleData,nums,currentNum,onlyfiltered);
-    this->filename =QString::fromStdString(ria->getFilename());
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),nums,currentNum);
     _DisSpec->getWidget()->plotData=sampleData;
     _DisSpec->getWidget()->setL(L,currentNum,down,false);
 }
@@ -665,10 +664,8 @@ void MainWindow::getFilterdata()
 void MainWindow::applyFilters()
 {
     getFilterdata();
-    onlyfiltered = true;
-    ria->writeToWave(filterData,sr,num,onlyfiltered);
-    this->fileName1 = QString::fromStdString(ria->getFilename());
-    ria->writeToWave(filterData,sr,num,onlyfiltered);
+    _filteredFileName = QDir::tempPath()+"/tmp2.wav";
+    ria->writeToWave(filterData,_filteredFileName.toLatin1().data(),sr,num);
     if(L==1&&down==1)
     {
         utilities->setOnlyFiltered(true);
@@ -681,9 +678,8 @@ void MainWindow::applyFilters()
     sampleData = utilities->getSampleData(false);
     _SampledWave->getGlwidget()->plotData=sampleData;
     _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
-    onlyfiltered = false;
-    ria->writeToWave(sampleData,sr*L/down,currentNum,onlyfiltered);
-    this->filename =QString::fromStdString(ria->getFilename());
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
     _SampledWave->getGlwidget()->updateGL();
     _DisSpec->getWidget()->plotData=sampleData;
     _DisSpec->getWidget()->setL(L,currentNum,down,true);
@@ -745,9 +741,8 @@ void MainWindow::setBits(int bits)
     qData = utilities->getQuantize();
     _SampledWave->getGlwidget()->plotData = qData;
     _DisSpec->getWidget()->plotData = qData;
-    onlyfiltered = false;
-    ria->writeToWave(qData,sr*L/down,currentNum,onlyfiltered);
-    this->filename =QString::fromStdString(ria->getFilename());
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(qData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
     if(bits >= _trueBits)
     {
         SNR->setText("inf");
@@ -814,16 +809,16 @@ void MainWindow::wheelEvent(QWheelEvent *e)
             double p = e->pos().x();
             p = (float)p/_OrgWave->hSc->width() * 100 -50;
 
-             qDebug()<<_OrgWave->pos().x()+_OrgWave->width();
-             qDebug()<<e->pos().x();
             _OrgWave->getGlwidget()->setHshift(p);
             _SampledWave->getGlwidget()->setHshift(p);
             _OrgWave->getGlwidget()->hIncrease();
             _SampledWave->getGlwidget()->hIncrease();
+            qDebug()<<_ConSpec->pos();
         }
         else
         {
-            double p = e->x();
+
+            double p = e->pos().x();
             p = (float)p/_OrgWave->hSc->width() * 100 -50;
             _OrgWave->getGlwidget()->setHshift(p);
             _SampledWave->getGlwidget()->setHshift(p);
@@ -831,15 +826,24 @@ void MainWindow::wheelEvent(QWheelEvent *e)
             _SampledWave->getGlwidget()->hDecrease();
         }
     }
-    else if(e->pos().x()>width()*0.5 && e->pos().x()<width()*0.8)
+    else if(e->pos().x() > _ConSpec->pos().x() && e->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
     {
         if(e->delta()>0)
         {
+           // double p = e->pos().x()-_ConSpec->pos().x();
+           // qDebug()<<p;
+          //  p = (float)p/_ConSpec->hSc->width() * 100 -50;
+          //  _DisSpec->getWidget()->setHshift(p);
+          //  _ConSpec->getWidget()->setHshift(p);
             _DisSpec->getWidget()->hIncrease();
             _ConSpec->getWidget()->hIncrease();
         }
         else
         {
+           // double p = e->pos().x()-_ConSpec->pos().x();
+           // p = (float)p/_ConSpec->hSc->width() * 100 -50;
+           // _DisSpec->getWidget()->setHshift(p);
+          //  _ConSpec->getWidget()->setHshift(p);
             _DisSpec->getWidget()->hDecrease();
             _ConSpec->getWidget()->hDecrease();
         }
@@ -858,15 +862,24 @@ void MainWindow::mouseMoveEvent(QMouseEvent *event)
             _OrgWave->getGlwidget()->setHshift(p);
 
             _SampledWave->getGlwidget()->setHshift(p);
-          //  bindWaveScroll(p);
+            _OrgWave->hSc->blockSignals(true);
+            _SampledWave->hSc->blockSignals(true);
+            bindWaveScroll(p);
+            _OrgWave->hSc->blockSignals(false);
+            _SampledWave->hSc->blockSignals(false);
         }
-        else if(event->pos().x()>width()*0.5 && event->pos().x()<width()*0.8)
+        else if(event->pos().x() > _ConSpec->pos().x() && event->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
         {
-            int p = event->x()-width()*0.5;
+            double p = event->pos().x()-_ConSpec->pos().x();
 
             p = (float)p/_ConSpec->hSc->width() * 100 -50;
-
+            _DisSpec->hSc->blockSignals(true);
+            _ConSpec->hSc->blockSignals(true);
             bindSpecScroll(p);
+            _DisSpec->hSc->blockSignals(false);
+            _ConSpec->hSc->blockSignals(false);
+           _DisSpec->getWidget()->setHshift(p);
+           _ConSpec->getWidget()->setHshift(p);
         }
     }
 }
@@ -883,13 +896,12 @@ void MainWindow::enableNoiseSelect(bool i)
         for(int i =0; i < num; i++)
             buf1[i] =_orgData[i];
         utilities->updateUtilites(buf1,num);
-        fileName=QDir::tempPath()+"/ddd";
-        ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
+        _orgFileName=QDir::tempPath()+"/tmp.wav";
+        ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
         _ConSpec->getWidget()->updateGL();
          nonIntSr(sampleRateSelect->currentText());
       _DisSpec->getWidget()->updateGL();
         _OrgWave->getGlwidget()->updateGL();
-
         _SampledWave->getGlwidget()->updateGL();
     }
 
@@ -914,9 +926,9 @@ void MainWindow::noiseAddfunc(int index)
     for(int i =0; i < num; i++)
         buf1[i] =(_orgData[i] + (float)sin(freq*i)/5.0)/1.2;
     utilities->updateUtilites(buf1,num);
-    fileName=QDir::tempPath()+"/ddd";
-    filename = fileName;
-    ria->writeToWave(buf1,fileName.toAscii().data(),sr,num);
+    _orgFileName=QDir::tempPath()+"/tmp.wav";
+    _sampleFileName = _orgFileName;
+    ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
      nonIntSr(sampleRateSelect->currentText());
     _ConSpec->getWidget()->updateGL();
   _DisSpec->getWidget()->updateGL();

@@ -100,7 +100,7 @@ void plot::initialCommonConp(bool wave)
 
     if(wave)
     {
-        connect(hSc,SIGNAL(valueChanged(int)),widget,SLOT(setHshift(int)));
+        connect(hSc,SIGNAL(valueChanged(int)),widget,SLOT(intToDouble(int)));
         connect(vSc,SIGNAL(valueChanged(int)),widget,SLOT(setVshift(int)));
         connect(vReset,SIGNAL(clicked()),widget,SLOT(resetV()));
         connect(hReset,SIGNAL(clicked()),widget,SLOT(resetH()));
@@ -111,7 +111,7 @@ void plot::initialCommonConp(bool wave)
     }
     else
     {
-        connect(hSc,SIGNAL(valueChanged(int)),widget1,SLOT(setHshift(int)));
+        connect(hSc,SIGNAL(valueChanged(int)),widget1,SLOT(intToDouble(int)));
         connect(vSc,SIGNAL(valueChanged(int)),widget1,SLOT(setVshift(int)));
         connect(vReset,SIGNAL(clicked()),widget1,SLOT(resetV()));
         connect(hReset,SIGNAL(clicked()),widget1,SLOT(resetH()));
