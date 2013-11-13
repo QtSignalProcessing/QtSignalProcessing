@@ -537,7 +537,7 @@ void GLOSpectrum::paintGL()
             }
             glEnd();
             ptDist = 0;
-            previousIndex = 0;
+            previousIndex = currentNumItems/2;
             glBegin(GL_LINE_STRIP);
             for ( x =  currentNumItems/2; x >=0; x--)
                 {
