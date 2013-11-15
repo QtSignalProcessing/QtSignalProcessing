@@ -141,24 +141,32 @@ void GLSW::paintGL()
     }
     else
     {
-        data1=data;
+        if(plotData != NULL)
+        {
+            data1 = plotData;
+            cout<<"sdfsf"<<endl;
+        }
+        else
+        {
+            data1=data;
+        }
         glBegin(GL_LINE_STRIP);
           ptDist = (float)number/2/(xScaleW1*hIn)-hshift+((width-xShiftW1)/2-(number/2)/(xScaleW1*hIn))+xShiftW1;
            for(int x=number/2;x>=0;x--){
                float xCor= (float)x/(xScaleW1*hIn)-hshift+((width-xShiftW1)/2-(number/2)/(xScaleW1*hIn))+xShiftW1;
-               if((xCor>=xShiftW1)&&(data[x]*(yScaleW1*vIn)+yShiftW1+vshift>height/11))
+               if((xCor>=xShiftW1)&&(data1[x]*(yScaleW1*vIn)+yShiftW1+vshift>height/11))
                 {
 
-                   if(fabs(getDist(ptDist,data[ getIndex(ptDist) ]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
+                   if(fabs(getDist(ptDist,data1[ getIndex(ptDist) ]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data1[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
                     {
                         if(getIndex(ptDist)<0)
                              cout<<getIndex(ptDist)<<endl;
-                        glVertex2f(xCor, data[x]*(yScaleW1*vIn)+yShiftW1+vshift);
+                        glVertex2f(xCor, data1[x]*(yScaleW1*vIn)+yShiftW1+vshift);
                         ptDist = xCor;
                     }
                 }
-               if((xCor>=xShiftW1)&&(data[x]*(yScaleW1*vIn)+yShiftW1+vshift<=height/11))
-                   if(fabs(getDist(ptDist,data[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
+               if((xCor>=xShiftW1)&&(data1[x]*(yScaleW1*vIn)+yShiftW1+vshift<=height/11))
+                   if(fabs(getDist(ptDist,data1[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data1[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
                     {
                         glVertex2f(xCor, height/11);
                        ptDist = xCor;
@@ -171,18 +179,18 @@ void GLSW::paintGL()
            for(int x=number/2-1;x<number;x++)
            {
                float xCor= (float)x/(xScaleW1*hIn)-hshift+((width-xShiftW1)/2-(number/2)/(xScaleW1*hIn))+xShiftW1;
-               if((xCor>=xShiftW1)&&(data[x]*(yScaleW1*vIn)+yShiftW1+vshift>height/9))
+               if((xCor>=xShiftW1)&&(data1[x]*(yScaleW1*vIn)+yShiftW1+vshift>height/9))
                {
-                   if(fabs(getDist(ptDist,data[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
+                   if(fabs(getDist(ptDist,data1[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data1[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
                    {
-                        glVertex2f(xCor, data[x]*(yScaleW1*vIn)+yShiftW1+vshift);
+                        glVertex2f(xCor, data1[x]*(yScaleW1*vIn)+yShiftW1+vshift);
                         ptDist = xCor;
                    }
 
                }
-               if((xCor>=xShiftW1)&&(data[x]*(yScaleW1*vIn)+yShiftW1+vshift<=height/11))
+               if((xCor>=xShiftW1)&&(data1[x]*(yScaleW1*vIn)+yShiftW1+vshift<=height/11))
                {
-                   if(fabs(getDist(ptDist,data[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
+                   if(fabs(getDist(ptDist,data1[getIndex(ptDist)]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data1[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
                    {
                        glVertex2f(xCor, height/11);
 

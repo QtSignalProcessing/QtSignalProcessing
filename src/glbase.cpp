@@ -4,7 +4,7 @@ GLBase::GLBase(float *buf,int num,float time,bool sample,int sr,QWidget *parent)
     : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
       width(450), height(280), downSample(1),vIn(1),vDe(0),hIn(1),hshift(0),vshift(0),
       bits(0),L(1),currentMin(0),currentMax(time),sampleOrNot(sample),sr(sr),
-      time(time),number(num),currentNumItems(num),data(buf),orgShift(0),xLabels(NULL),xCor(NULL),
+      time(time),number(num),currentNumItems(num),data(buf),plotData(NULL),orgShift(0),xLabels(NULL),xCor(NULL),
       xShiftW1(30),xFactor2(0.1),replace(false)
 {
     this->setWindowTitle("OpenGL widget");
@@ -56,6 +56,8 @@ void GLBase::resetCommon()
     orgShift = 0;
     xFactor2 = 0.1;
     bits = 0;
+    plotData = NULL;
+
 }
 
 
@@ -101,7 +103,7 @@ void GLBase::nonIntSr(QString s)
 
 QSize GLBase::minimumSizeHint() const
 {
-    return QSize(50, 50);
+    return QSize(20, 20);
 }
 
 QSize GLBase::sizeHint() const

@@ -16,6 +16,11 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     name->setText("Anti-aliasing filter");
     name->setFont(font);
     widget=new GLOSpectrum(ria,num,discrete,sr);
+    float  time=(float)num/sr;
+    _timeWidget=new GLSW(ria,num,time,false);
+    QHBoxLayout* widgetLayout = new QHBoxLayout;
+    widgetLayout->addWidget(_timeWidget);
+    widgetLayout->addWidget(widget);
     Fdes=new QLabel(this);
     font.cleanup();
     font.setBold(true);
@@ -80,24 +85,35 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     }
     cutFreqSel->addItems(texts);
     connect(cutFreqSel,SIGNAL(currentIndexChanged(QString)),widget,SLOT(setFactor(QString)));
+    QHBoxLayout *activeFreqLayout = new QHBoxLayout;
     reset=new QToolButton(this);
     reset->setText("Set to Nyq. Freq.");
     connect(reset,SIGNAL(clicked()),widget,SLOT(setToN()));
+    QLabel *activeLabel = new QLabel("Actual cut off freq.:");
+    _displayActualFreq = new QLabel(cutFreqSel->currentText());
+    activeFreqLayout->addWidget(reset);
+    activeFreqLayout->addStretch();
+    activeFreqLayout->addWidget(activeLabel);
+    activeFreqLayout->addWidget(_displayActualFreq);
     play=new QToolButton(this);
     play->setText("Play");
     apply=new QToolButton(this);
     apply->setText("Apply");
     connect(apply,SIGNAL(clicked()),widget,SLOT(Filter()));
+    connect(apply,SIGNAL(clicked()),this,SLOT(setActualFreq()));
     connect(reset,SIGNAL(clicked()),this,SLOT(setCutFreqToNy()));
+    connect(reset,SIGNAL(clicked()),this,SLOT(setActualFreq()));
     QGridLayout *ConpLayout = new QGridLayout(this);
     ConpLayout->addWidget(name,0,0);
-    ConpLayout->addWidget(widget,1,0);
+    ConpLayout->addLayout(widgetLayout,1,0);
+    //ConpLayout->addWidget(widget,1,0);
     ConpLayout->addWidget(Fdes,2,0);
     ConpLayout->addWidget(filterSelect,3,0);
     ConpLayout->addWidget(ooder,4,0);
     ConpLayout->addWidget(cutOfF,5,0);
     ConpLayout->addWidget(cutFreqSel,6,0);
-    ConpLayout->addWidget(reset,7,0);
+    //ConpLayout->addWidget(reset,7,0);
+    ConpLayout->addLayout(activeFreqLayout,7,0);
     ConpLayout->addWidget(play,8,1);
     ConpLayout->addWidget(apply,8,0);
     this->setLayout(ConpLayout);
@@ -121,6 +137,11 @@ void plotFilter::filterChanged(int index)
 GLOSpectrum* plotFilter::getWidget()
 {
     return this->widget;
+}
+
+GLSW* plotFilter::getGLWidget()
+{
+    return _timeWidget;
 }
 
 void plotFilter::setComboText(QString string)
@@ -155,4 +176,11 @@ void plotFilter::closeEvent(QCloseEvent *event)
 {
     event->accept();
     emit closed(false);
+}
+
+void plotFilter::setActualFreq()
+{
+    _displayActualFreq->setText(cutFreqSel->currentText());
+    _timeWidget->plotData = widget->filterData;
+    _timeWidget->updateGL();
 }
