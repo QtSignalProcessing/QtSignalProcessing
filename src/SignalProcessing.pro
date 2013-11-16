@@ -24,24 +24,24 @@ SOURCES += main.cpp\
     glospectrum.cpp \
     iir.cpp \
     plotfilter.cpp \
-    cheby1.cpp \
     axislabel.cpp \
     glsw.cpp \
     utilities.cpp \
     audiohandle.cpp \
-    glbase.cpp
+    glbase.cpp \
+    chebyshevfilter.cpp
 
 HEADERS  += mainwindow.h \
     plotwidget.h \
     glospectrum.h \
     iir.h \
     plotfilter.h \
-    cheby1.h \
     axislabel.h\
     glsw.h \
     utilities.h \
     audiohandle.h \
-    glbase.h
+    glbase.h \
+    chebyshevfilter.h
 
 INCLUDEPATH  += ../include
 

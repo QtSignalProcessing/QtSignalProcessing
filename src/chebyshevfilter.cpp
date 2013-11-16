@@ -1,4 +1,4 @@
-#include "cheby1.h"
+#include "chebyshevfilter.h"
 
 #include <cmath>
 
@@ -65,7 +65,7 @@ double cabs ( cmplx *z );
  void csqrt ( cmplx *z, cmplx *w );
  void csub ( cmplx *a, cmplx *b, cmplx *c );
 int zplnc ( void );
-cheby1::cheby1(int type,int order,double ripple,double samRate,double cutF1,double cutF2)
+ChebyshevFilter::ChebyshevFilter(int type,int order,double ripple,double samRate,double cutF1,double cutF2)
 {
     dbfac = 10.0/log(10.0);
    kind=2;
@@ -341,7 +341,7 @@ w->i *= 0.5;
 }
 
 /* calculate s plane poles and zeros, normalized to wc = 1 */
-int cheby1::spln()
+int ChebyshevFilter::spln()
 {
 for( i=0; i<ARRSIZ; i++ )
 zs[i] = 0.0;
@@ -459,7 +459,7 @@ break;
 return 0;
 }
 
-int cheby1::zplna()
+int ChebyshevFilter::zplna()
 {
 cmplx r, cnum, cden, cwc, ca, cb, b4ac;
 double C;
@@ -587,7 +587,7 @@ nc = nz;
 return 0;
 }
 
-int cheby1::zplnb()
+int ChebyshevFilter::zplnb()
 {
 if( kind != 3 )
 { /* Butterworth or Chebyshev */
@@ -680,7 +680,7 @@ an = an + cng * (aa[jh] + (1.0 - 2.0 * ai) * aa[jl]);
 return 0;
 }
 
-int cheby1::zplnc()
+int ChebyshevFilter::zplnc()
 {
 gain = an/(pn*scale);
 if( (kind != 3) && (pn == 0) )

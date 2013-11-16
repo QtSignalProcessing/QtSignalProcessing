@@ -14,7 +14,7 @@ set(CMAKE_AUTOMOC ON)
 set(SignalProcessing_SRCS
   src/audiohandle.cpp
   src/axislabel.cpp
-  src/cheby1.cpp
+  src/chebyshevfilter.cpp
   src/glbase.cpp
   src/glospectrum.cpp
   src/glsw.cpp
@@ -27,6 +27,10 @@ set(SignalProcessing_SRCS
 )
 
 if (QT5_BUILD)
+	if(WIN32)
+		set (CMAKE_PREFIX_PATH "C:\\Qt\\5.1.1\\msvc2010_opengl\\")
+		cmake_policy(SET CMP0020 OLD)
+	endif()
   find_package(Qt5Core REQUIRED)
 endif()
 
@@ -38,7 +42,6 @@ else(Qt5Core_FOUND)
   find_package(Qt4 REQUIRED QtCore QtGui QtOpenGl)
 	if (WIN32)
 		set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-		include_directories(${CMAKE_SOURCE_DIR}/include)
 	endif()
   find_package(Phonon REQUIRED)
   include(${QT_USE_FILE})
@@ -46,6 +49,7 @@ else(Qt5Core_FOUND)
 endif(Qt5Core_FOUND)
 
 if (WIN32)
+	include_directories(${CMAKE_SOURCE_DIR}/include)
 	target_link_libraries(SignalProcessing OpenGL32 ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/sndfile.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/fftw3.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/samplerate.lib)
 elseif()
 	target_link_libraries(SignalProcessing GL sndfile fftw3 samplerate)

@@ -3,7 +3,6 @@
 
 class AxisLabel
 {
-
   public:
     AxisLabel(double min,double max);
     void setCurrent(double currentMin,double currentMax);

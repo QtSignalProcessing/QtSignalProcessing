@@ -2,7 +2,7 @@
 
 #include "axislabel.h"
 #include "iir.h"
-#include "cheby1.h"
+#include "chebyshevfilter.h"
 
 #include "fftw3.h"
 
@@ -163,7 +163,7 @@ void GLOSpectrum::Filter()
     }
     else
     {
-        cheby1* d=new cheby1(1,order,ripple,sr*1000,sr*1000*(factor)/2,0);
+        ChebyshevFilter* d=new ChebyshevFilter(1,order,ripple,sr*1000,sr*1000*(factor)/2,0);
         for(int i=0;i<=order;i++)
         {
             b1[i]=d->pp[i];

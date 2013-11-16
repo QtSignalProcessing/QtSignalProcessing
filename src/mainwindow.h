@@ -19,7 +19,7 @@ class Utilities;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+  Q_OBJECT
 
   public:
       MainWindow(QWidget *parent = 0);
@@ -43,7 +43,7 @@ class MainWindow : public QMainWindow
       void updateFilter();
       float getMax(float *a,int num);
 
-  public   slots:
+  public slots:
       void play();
       void playSample();
       void playfiltered();
@@ -120,7 +120,7 @@ class MainWindow : public QMainWindow
       QCheckBox* _showSampleRange;
       QCheckBox* _showOnePeriod;
       bool loadingFailed;
-	  QCheckBox* _addNoise;
+      QCheckBox* _addNoise;
       QComboBox* _selectNoise;
       float* _orgData;
       QString _orgFileName;
