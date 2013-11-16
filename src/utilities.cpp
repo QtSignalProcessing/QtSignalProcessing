@@ -1,8 +1,11 @@
 #include "utilities.h"
-#include<stdlib.h>
-#include<math.h>
-#include<iostream>
-using namespace std;
+
+#include "samplerate.h"
+
+#include <cstdlib>
+#include <cmath>
+#include <cstdio>
+
 Utilities::Utilities(float* data,int number):bits(0),L(1),down(1),data(data),qData(NULL),
     sampleData(NULL),filterData(NULL),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0)
 {
@@ -37,9 +40,9 @@ float* Utilities::getQuantize()
     float max = 1;
     if((down==1)&&(L==1))
     {
-        int num=pow(2,bits);
+        int num = std::pow(2,bits);
         float step=2*max/(float)num;
-        float level[num];
+        float* level = new float[num];
         for(int i=0;i<num;i++)
           {
               level[i]=-max+step*(float)i;
@@ -54,12 +57,13 @@ float* Utilities::getQuantize()
                 index=0;
             qData[i]=level[0]+(float)index*step;
         }
+        delete[] level;
         return qData;
     }
     int num=pow(2,bits);
     float step= 2 * max / (float)num;
 
-    float level[num];
+    float* level = new float[num];
     for(int i=0;i<num;i++)
       {
           level[i]=  -max + step * (float)i;
@@ -84,6 +88,7 @@ float* Utilities::getQuantize()
             index=0;
         qData[i]=level[index];
     }
+    delete[] level;
     return qData;
 }
 

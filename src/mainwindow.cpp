@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 
-#include "plot.h"
+#include "plotwidget.h"
 #include "utilities.h"
 #include "audiohandle.h"
 #include "plotfilter.h"
+#include "glsw.h"
+#include "glospectrum.h"
 
 #include <QMouseEvent>
 #include <QComboBox>
@@ -15,6 +17,10 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QApplication>
+#include <QToolButton>
+#include <QScrollBar>
+#include <QGridLayout>
+#include <QLabel>
 
 #if QT_VERSION < 0x050000
 #include <phonon/MediaObject>
@@ -94,14 +100,14 @@ void MainWindow::createWidget(QWidget *main)
      initializeVar();
     //create the widget Plot Sampled waveform
     utilities=new Utilities(buf1,num);
-    _SampledWave=new plot(buf1,num,time,true,main);
+    _SampledWave = new PlotWidget(buf1,num,time,true,main);
     //create the widget to plot the oroginal waveform
-    _OrgWave=new plot(buf1,num,time,false,main);
-    discrete=false;
+    _OrgWave = new PlotWidget(buf1,num,time,false,main);
+    discrete = false;
     //create the widget for the continuous-time spectrum
-    _ConSpec=new plot(buf1,num,discrete,sr,main);
+    _ConSpec = new PlotWidget(buf1,num,discrete,sr,main);
     //discrete-time spectrum
-    _DisSpec=new plot(buf1,num,true,sr,main);
+    _DisSpec=new PlotWidget(buf1,num,true,sr,main);
     _OrgWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _ConSpec->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _SampledWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
@@ -907,7 +913,7 @@ void MainWindow::enableNoiseSelect(bool i)
             buf1[i] =_orgData[i];
         utilities->updateUtilites(buf1,num);
         _orgFileName=QDir::tempPath()+"/tmp.wav";
-        ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
+        ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
         _ConSpec->getWidget()->updateGL();
          nonIntSr(sampleRateSelect->currentText());
       _DisSpec->getWidget()->updateGL();
@@ -938,7 +944,7 @@ void MainWindow::noiseAddfunc(int index)
     utilities->updateUtilites(buf1,num);
     _orgFileName=QDir::tempPath()+"/tmp.wav";
     _sampleFileName = _orgFileName;
-    ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
+    ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
      nonIntSr(sampleRateSelect->currentText());
     _ConSpec->getWidget()->updateGL();
   _DisSpec->getWidget()->updateGL();

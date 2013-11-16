@@ -12,7 +12,8 @@
 
 class cheby1
 {
-public:
+
+  public:
     cheby1(int type,int order,double ripple,double samRate,double cutF1,double cutF2);
    // ~cheby1();
      double rn;

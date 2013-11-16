@@ -21,7 +21,7 @@ set(SignalProcessing_SRCS
   src/iir.cpp
   src/main.cpp
   src/mainwindow.cpp
-  src/plot.cpp
+  src/plotwidget.cpp
   src/plotfilter.cpp
   src/utilities.cpp
 )
@@ -35,12 +35,24 @@ add_executable(SignalProcessing ${SignalProcessing_SRCS})
 if (Qt5Core_FOUND)
   qt5_use_modules(SignalProcessing Widgets OpenGL Multimedia)
 else(Qt5Core_FOUND)
-  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGl) 
+  find_package(Qt4 REQUIRED QtCore QtGui QtOpenGl)
+	if (WIN32)
+		set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+		include_directories(${CMAKE_SOURCE_DIR}/include)
+	endif()
   find_package(Phonon REQUIRED)
   include(${QT_USE_FILE})
-  target_link_libraries(SignalProcessing ${QT_LIBRARIES} phonon)
+  target_link_libraries(SignalProcessing ${QT_LIBRARIES} ${PHONON_LIBS})
 endif(Qt5Core_FOUND)
 
-target_link_libraries(SignalProcessing GL sndfile fftw3 samplerate)
+if (WIN32)
+	target_link_libraries(SignalProcessing OpenGL32 ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/sndfile.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/fftw3.lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/win32/samplerate.lib)
+elseif()
+	target_link_libraries(SignalProcessing GL sndfile fftw3 samplerate)
+endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++0x")
+if (WIN32)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++0x")
+endif()

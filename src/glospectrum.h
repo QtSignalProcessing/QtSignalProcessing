@@ -1,8 +1,8 @@
 #ifndef GLOSPECTRUM_H
 #define GLOSPECTRUM_H
-#include "axislabel.h"
-#include <QGLWidget>
+
 #include"glbase.h"
+
 class GLOSpectrum : public GLBase
 {
     Q_OBJECT

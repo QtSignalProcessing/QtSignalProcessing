@@ -3,7 +3,7 @@
 
 class IIR
 {
-public:
+  public:
     IIR(int fType,int order,double cutOffFreq,double lowCutF,double highCutF);
     ~IIR();
     double* b;

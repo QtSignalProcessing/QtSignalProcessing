@@ -1,12 +1,18 @@
-#include "plot.h"
+#include "plotwidget.h"
 
-#include<QLabel>
-#include<QWheelEvent>
+#include "glsw.h"
+#include "glospectrum.h"
+
+#include <QLabel>
+#include <QWheelEvent>
+#include <QToolButton>
+#include <QLabel>
+#include <QGridLayout>
+#include <QScrollBar>
 
 #include<iostream>
 
-using namespace std;
-plot::plot(float *ria,int num,float time,bool sampleOrNot,QWidget *parent) :
+PlotWidget::PlotWidget(float *ria,int num,float time,bool sampleOrNot,QWidget *parent) :
     QWidget(parent),widget1(NULL)
 {
     widget=new GLSW(ria,num,time,sampleOrNot);
@@ -23,7 +29,7 @@ plot::plot(float *ria,int num,float time,bool sampleOrNot,QWidget *parent) :
     initialCommonConp(true);
 }
 
-plot::plot(float *ria,int num,bool discrete,int sr,QWidget *parent)
+PlotWidget::PlotWidget(float *ria,int num,bool discrete,int sr,QWidget *parent)
     :QWidget(parent),widget(NULL)
 {
     widget1=new GLOSpectrum(ria,num,discrete,sr);
@@ -40,22 +46,22 @@ plot::plot(float *ria,int num,bool discrete,int sr,QWidget *parent)
     initialCommonConp(false);
 }
 
-GLSW* plot::getGlwidget()
+GLSW* PlotWidget::getGlwidget()
 {
     return this->widget;
 }
 
-void plot::resetw()
+void PlotWidget::resetw()
 {
     hSc->setSliderPosition(0);
 }
 
-GLOSpectrum* plot::getWidget()
+GLOSpectrum* PlotWidget::getWidget()
 {
     return this->widget1;
 }
 
-void plot::initialCommonConp(bool wave)
+void PlotWidget::initialCommonConp(bool wave)
 {
     hSc=new QScrollBar(Qt::Horizontal);
     hSc->setMinimum(-50);

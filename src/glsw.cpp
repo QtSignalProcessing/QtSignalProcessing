@@ -1,14 +1,8 @@
 #include "glsw.h"
-#include <QtGui>
-#include <QtOpenGL>
-#include <QDebug>
-#include <math.h>
 
-#include<iostream>
+#include "axislabel.h"
 
-using namespace std;
 void DrawCircle(float cx, float cy, float r, int num_segments) ;
-
 
 GLSW::GLSW(float *buf,int num,float time,bool sample,QWidget *parent)
     : GLBase(buf,num,time,sample,sr,parent),SNR(0),r(4),_stickOn(false)
@@ -21,7 +15,7 @@ GLSW::~GLSW()
 void GLSW::paintGL()
 {
     xScaleW1=number/(width-xShiftW1);
-    yScaleW1=(float)(height-height/9)/max/2;
+    yScaleW1=(float)(height-height/9)/_max/2;
     yShiftW1=(height+height/10)/2;
     ylabel->autoScale();
     glPushMatrix();
@@ -144,7 +138,6 @@ void GLSW::paintGL()
         if(plotData != NULL)
         {
             data1 = plotData;
-            cout<<"sdfsf"<<endl;
         }
         else
         {
@@ -159,8 +152,6 @@ void GLSW::paintGL()
 
                    if(fabs(getDist(ptDist,data1[ getIndex(ptDist) ]*(yScaleW1*vIn)+yShiftW1+vshift,xCor,data1[x]*(yScaleW1*vIn)+yShiftW1+vshift)) >= 1)
                     {
-                        if(getIndex(ptDist)<0)
-                             cout<<getIndex(ptDist)<<endl;
                         glVertex2f(xCor, data1[x]*(yScaleW1*vIn)+yShiftW1+vshift);
                         ptDist = xCor;
                     }

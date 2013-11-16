@@ -1,9 +1,8 @@
 #ifndef GLSW_H
 #define GLSW_H
+
 #include"glbase.h"
-#include <QGLWidget>
-#include<QString>
-#include "axislabel.h"
+
 class GLSW : public GLBase
 {
     Q_OBJECT

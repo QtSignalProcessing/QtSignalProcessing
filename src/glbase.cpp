@@ -1,5 +1,7 @@
 #include "glbase.h"
 
+#include "axislabel.h"
+
 GLBase::GLBase(float *buf,int num,float time,bool sample,int sr,QWidget *parent)
     : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
       width(450), height(280), downSample(1),vIn(1),vDe(0),hIn(1),hshift(0),vshift(0),
@@ -9,23 +11,37 @@ GLBase::GLBase(float *buf,int num,float time,bool sample,int sr,QWidget *parent)
 {
     this->setWindowTitle("OpenGL widget");
     this->resize(width, height);
-    max=getMax1(buf,num);
+    _max=getMax1(buf,num);
     xlabel = new AxisLabel(0, time);
     xScaleW1=number/(width-xShiftW1);
     yScaleW1=(float)(height-height/9)/1.5;
     yShiftW1=(height+height/10)/2;
-    yMaxcord = max*(yScaleW1)+yShiftW1;
+    yMaxcord = _max*(yScaleW1)+yShiftW1;
     yMincord = 2 * yShiftW1 - yMaxcord;
-    ylabel=new AxisLabel(floor(-max), ceil(max));
+    ylabel=new AxisLabel(floor(-_max), ceil(_max));
     ylabel->setMaxNumSteps(8);
     computeCurrent();
     computeYCurrent();
 }
 
 GLBase::GLBase(float *buf,int num,QWidget *parent)
-    : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
-         width(450), height(280),downSample(1),vIn(1),vDe(0),hIn(1),hshift(0),vshift(0),bits(0),L(1)
-    ,number(num),currentNumItems(number),data(buf),plotData(NULL),max(0),orgShift(0)
+  :QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
+  width(450),
+  height(280),
+  downSample(1),
+  vIn(1),
+  vDe(0),
+  hIn(1),
+  hshift(0),
+  vshift(0),
+  bits(0),
+  L(1),
+  number(num),
+  currentNumItems(number),
+  data(buf),
+  plotData(NULL),
+  _max(0),
+  orgShift(0)
     ,xLabels(NULL),xCor(NULL),yLabels(NULL),yCor(NULL),xShiftW1(30),xFactor2(0.1)
 {
     this->setWindowTitle("OpenGL widget");
@@ -171,7 +187,7 @@ void GLBase::setHshift(double shift)
 
 void GLBase::setVshift(int shift)
 {
-    int len=(yScaleW1*vIn)*max;
+    int len=(yScaleW1*vIn)*_max;
     this->vshift=shift/100.0*(len-height/2);
     updateGL();
 }
@@ -264,7 +280,7 @@ void GLBase::resetDataAndOther(float *data, int num, float time, float max)
     this->data= data;
     this->number = num;
     this->time = time;
-    this->max = max;
+    this->_max = max;
     currentNumItems = number;
 }
 

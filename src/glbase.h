@@ -1,13 +1,15 @@
 #ifndef GLBASE_H
 #define GLBASE_H
+
 #include <QGLWidget>
-#include<QString>
-#include "axislabel.h"
-#include<math.h>
+
+class AxisLabel;
+
 class GLBase : public QGLWidget
 {
     Q_OBJECT
-public:
+
+  public:
     GLBase(float *buf,int num,float time,bool sample,int sr,QWidget *parent=0);
     GLBase(float *buf,int num,QWidget *parent = 0);
     QSize minimumSizeHint() const;
@@ -54,7 +56,7 @@ public:
     int currentNumItems;
     float* data;
     float *plotData;
-    float max;
+    float _max;
     int orgShift;
     float* xLabels;
     float* xCor;

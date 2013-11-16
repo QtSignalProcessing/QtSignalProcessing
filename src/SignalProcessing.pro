@@ -4,14 +4,23 @@
 #
 #-------------------------------------------------
 
-QT += core gui opengl phonon
+QT += core opengl
+
+#check Qt version
+QT_VERSION = $$[QT_VERSION]
+QT_VERSION = $$split(QT_VERSION, ".")
+QT_VERSION_MAJOR = $$member(QT_VERSION, 0)
+QT_VERSION_MINOR = $$member(QT_VERSION, 1)
+
+isEqual(QT_VERSION_MAJOR, 4): QT += gui phonon
+isEqual(QT_VERSION_MAJOR, 5): QT += widgets multimediawidgets
 
 TARGET = SignalProcessing
 TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    plot.cpp \
+    plotwidget.cpp \
     glospectrum.cpp \
     iir.cpp \
     plotfilter.cpp \
@@ -23,7 +32,7 @@ SOURCES += main.cpp\
     glbase.cpp
 
 HEADERS  += mainwindow.h \
-    plot.h \
+    plotwidget.h \
     glospectrum.h \
     iir.h \
     plotfilter.h \
@@ -34,12 +43,7 @@ HEADERS  += mainwindow.h \
     audiohandle.h \
     glbase.h
 
+INCLUDEPATH  += ../include
 
-unix|win32: LIBS += -lsndfile
-unix|win32: LIBS += -lfftw3
-unix|win32: LIBS += -lsamplerate
-
-OTHER_FILES +=
-
-
-
+unix: LIBS += -lsndfile -lfftw3 -lsamplerate
+win32: LIBS += ../lib/win32/sndfile.lib ../lib/win32/fftw3.lib ../lib/win32/samplerate.lib

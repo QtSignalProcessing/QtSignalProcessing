@@ -1,6 +1,7 @@
 #include "cheby1.h"
-#include<math.h>
-#include<stdio.h>
+
+#include <cmath>
+
 typedef struct
 {
     double r;
@@ -10,9 +11,6 @@ cmplx czero = {0.0, 0.0};
 //extern cmplx czero;
 cmplx cone = {1.0, 0.0};
 //extern cmplx cone;
-#include<stdlib.h>
-#include <stdio.h>
-#include<math.h>
 double PI=3.14159265358979323846;
 double MAXNUM =  1.79769313486231570815E308;
 double MACHEP =  1.11022302462515654042E-16;   /* 2**-53 */
@@ -341,17 +339,6 @@ cadd( &q, &s, w );
 w->r *= 0.5;
 w->i *= 0.5;
 }
-
-
-double hypot(double x,double y )
-{
-cmplx z;
-
-z.r = x;
-z.i = y;
-return( cabs(&z) );
-}
-
 
 /* calculate s plane poles and zeros, normalized to wc = 1 */
 int cheby1::spln()

@@ -3,7 +3,8 @@
 
 class AxisLabel
 {
-public:
+
+  public:
     AxisLabel(double min,double max);
     void setCurrent(double currentMin,double currentMax);
     void autoScale();
@@ -12,12 +13,12 @@ public:
     void updateMaxMin(double max,double min);
     float* getYcord(float yscale,float vIn,float yshift,float vshift);
     float* getCord(float time, int number,float xScale,float xShift, double hshift ,int width,float hIn);
-   // float* getCord(float &time, int &number,float &xScale,float &xShift, double &hshift ,int &width,float &hIn,bool spec);
     ~AxisLabel();
      int size;
      float steps;
      void setMaxNumSteps(int maxNumSteps);
-private:
+
+  private:
     double min;
     double max;
     int maxNumSteps;

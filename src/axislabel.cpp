@@ -1,9 +1,10 @@
 #include "axislabel.h"
-#include<math.h>
-#include<stdlib.h>
-#include<iostream>
-using namespace std;
+
+#include <cstdlib>
+#include <cmath>
+
 static const double _eps = 1.0e-6;
+
 AxisLabel::AxisLabel(double min,double max):size(0),steps(0),min(min),max(max),maxNumSteps(8),currentMin(min),currentMax(max),
     base(10),labels(NULL),cord(NULL),yindex(NULL),ycord(NULL)
 {

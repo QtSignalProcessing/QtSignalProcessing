@@ -1,16 +1,10 @@
 #include "glospectrum.h"
-#include <QtGui>
-#include <QtOpenGL>
-#include <QDebug>
-#include <QVector>
-#include <math.h>
 
-#include<iostream>
-#include"iir.h"
-#include"fftw3.h"
-#include"cheby1.h"
-using namespace std;
-const double PI=3.14;
+#include "axislabel.h"
+#include "iir.h"
+#include "cheby1.h"
+
+#include "fftw3.h"
 
 GLOSpectrum::GLOSpectrum(float *buf,int num,bool discrete,int sr,QWidget *parent)
     : GLBase(buf,num,parent),
@@ -60,7 +54,7 @@ void GLOSpectrum::setVshift(int shift)
 {
     if(vIn!=1)
     {
-      int len=(yScales*vIn)*max;
+      int len=(yScales*vIn)*_max;
       this->vshift=(float)shift/100.0*(len-height);
     }
     updateGL();
@@ -298,9 +292,9 @@ void GLOSpectrum::paintGL()
     }
     if(currentNumItems == number)
     {
-        max=getMax1(  amplitude,currentNumItems/2/downSample);
-        yScales =  (float)(height-height/9)/max;
-        _currentYmax = max;
+        _max=getMax1(  amplitude,currentNumItems/2/downSample);
+        yScales =  (float)(height-height/9)/_max;
+        _currentYmax = _max;
     }
     glColor3f(1,0,0);
     glLineWidth(1);
@@ -1070,7 +1064,7 @@ int GLOSpectrum::getIndex(float value)
 
 int GLOSpectrum::normalizeMax(float max)
 {
-    int cmax=max;
+    float cmax=max;
     if(fabs(max)<=10&&fabs(max)>=1)
     {
         cmax=max;
@@ -1110,7 +1104,7 @@ void GLOSpectrum::ygenerateAxis()
         double S[]={1,2,5};
         uint i = 0;
         uint grid = 1;
-        int current = ceil(max);
+        int current = ceil(_max);
         while(!((int)(n*grid)>(current)))
         {
           ++i;
@@ -1126,7 +1120,7 @@ void GLOSpectrum::ygenerateAxis()
         if(ycord.size()!=0)
         ycord.clear();
         int step = current*vIn / numOfTicks;
-        float step2 =(float)max/numOfTicks;
+        float step2 =(float)_max/numOfTicks;
         for(int i=0;i<numOfTicks;i++)
         {
             yl.append(i*step2);
@@ -1159,7 +1153,7 @@ void GLOSpectrum::ygenerateAxis()
         double S[]={1,2,5};
         uint i = 0;
         uint grid = 1;
-        int current = ceil(max);
+        int current = ceil(_max);
         while(!((int)(n*grid)>(current)))
         {
           ++i;
@@ -1179,7 +1173,7 @@ void GLOSpectrum::ygenerateAxis()
            ycord.clear();
         }
         int step = current*vIn / numOfTicks;
-        float step2 =(float)max/numOfTicks;
+        float step2 =(float)_max/numOfTicks;
         for(int i=0;i<numOfTicks;i++)
         {
             yl.append(i*step2/sr);
@@ -1207,7 +1201,7 @@ void GLOSpectrum::ygenerateAxis()
 
 void GLOSpectrum::yPlotAxis(float yaxisFactor)
 {
-    int numOftick= normalizeMax(max)/yaxisFactor;
+    int numOftick= normalizeMax(_max)/yaxisFactor;
     yLabels=(float*)malloc(sizeof(float)*numOftick);
     QFont f;
     f.setPixelSize(10);
@@ -1302,7 +1296,7 @@ void GLOSpectrum::resetSpec(float *data, int number, int sr)
     this->data = data;
     this->number = number;
     this->sr = (float)sr/1000;
-    max=0;
+    _max=0;
     showRange=false;
     factor=1;
     NyqFreq=1;
