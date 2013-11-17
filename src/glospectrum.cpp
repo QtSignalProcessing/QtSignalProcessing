@@ -216,27 +216,27 @@ void GLOSpectrum::setToN()
 
 void GLOSpectrum::show2F(bool state)
 {
-    this->show2Spec=state;
-    if(show2Spec==false)
-    {
-        conFirst=false;
-        disFirst=false;
-        updateGL();
-    }
+  this->show2Spec=state;
+  if(show2Spec==false)
+  {
+    conFirst=false;
+    disFirst=false;
+    updateGL();
+  }
 }
 
 void GLOSpectrum::conDis()
 {
-    conFirst=true;
-    disFirst=false;
-    updateGL();
+  conFirst=true;
+  disFirst=false;
+  updateGL();
 }
 
 void GLOSpectrum::disCon()
 {
-    conFirst=false;
-    disFirst=true;
-    updateGL();
+  conFirst=false;
+  disFirst=true;
+  updateGL();
 }
 
 void GLOSpectrum::paintGL()
@@ -1078,7 +1078,7 @@ int GLOSpectrum::normalizeMax(float max)
             n++;
             cmax/=10;
         }
-        int plot=max/pow(10,n+1)+2;
+        int plot=max/pow(10.0,n+1)+2;
         return plot;
     }
     else
@@ -1090,7 +1090,7 @@ int GLOSpectrum::normalizeMax(float max)
             cmax1*=10;
             n++;
         }
-        int plot=max*pow(10,n+1)+1;
+        int plot=max*pow(10.0,n+1)+1;
                 return plot;
     }
 }
@@ -1108,7 +1108,7 @@ void GLOSpectrum::ygenerateAxis()
         while(!((int)(n*grid)>(current)))
         {
           ++i;
-          grid = pow(10,i/3)*S[i%3];
+          grid = pow(10.0,(int)i/3)*S[i%3];
         }
         int yGrid = grid;
         int numOfTicks = current*vIn/yGrid;
@@ -1157,7 +1157,7 @@ void GLOSpectrum::ygenerateAxis()
         while(!((int)(n*grid)>(current)))
         {
           ++i;
-          grid = pow(10,i/3)*S[i%3];
+          grid = pow(10.0,(int)i/3)*S[i%3];
         }
         int yGrid = grid;
         int numOfTicks = current*vIn/yGrid;
@@ -1319,14 +1319,14 @@ void GLOSpectrum::resetSpec(float *data, int number, int sr)
 
 void GLOSpectrum::show1Period(bool i)
 {
-    showOnePeriod = i;
-    updateGL();
+  showOnePeriod = i;
+  updateGL();
 }
 
 void GLOSpectrum::setShowAliasing(bool i)
 {
-    this->showAliasing = i;
-    updateGL();
+  this->showAliasing = i;
+  updateGL();
 }
 
 void GLOSpectrum::setBanned(bool i)

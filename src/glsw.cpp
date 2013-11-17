@@ -330,6 +330,6 @@ GLSW* GLSW::getGlwidget()
 
 void GLSW::setStickOn(bool i)
 {
-    _stickOn = i;
-    updateGL();
+  _stickOn = i;
+  updateGL();
 }

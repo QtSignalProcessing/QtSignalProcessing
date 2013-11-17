@@ -48,8 +48,8 @@ void AxisLabel::divideInterval()
         return;
 
     }
-    const double lx = log( fabs( v ) ) / log( base );
-    const double p = floor( lx );
+    const double lx = log(fabs(v))/log((double)base);
+    const double p = floor(lx);
     const double fraction = pow( base, lx-p );
     float n = base;
     while( ( n > 1 ) && ( fraction <=n / 2 ) )

@@ -140,51 +140,50 @@ void plotFilter::filterChanged(int index)
 
 GLOSpectrum* plotFilter::getWidget()
 {
-    return this->widget;
+  return this->widget;
 }
 
 GLSW* plotFilter::getGLWidget()
 {
-    return _timeWidget;
+  return _timeWidget;
 }
 
 void plotFilter::setComboText(QString string)
 {
-
-   NqLabel = string;
-   int b;
-   if(NqLabel.toInt()==11025 || NqLabel.toInt() == 44100)
-   {
-        b = NqLabel.toInt();
-   }
-   else
-    b = NqLabel.toInt() / 2;
-   QString s = QString::number(b);
-   int a = texts.indexOf(s);
-   if(a==-1)
-       return;
-    cutFreqSel->setCurrentIndex(a);
+ NqLabel = string;
+ int b;
+ if(NqLabel.toInt()==11025 || NqLabel.toInt() == 44100)
+ {
+      b = NqLabel.toInt();
+ }
+ else
+  b = NqLabel.toInt() / 2;
+ QString s = QString::number(b);
+ int a = texts.indexOf(s);
+ if(a==-1)
+     return;
+  cutFreqSel->setCurrentIndex(a);
 }
 
 void plotFilter::setCutFreqToNy()
 {
-    int b = NqLabel.toInt() / 2;
-    QString s = QString::number(b);
-    int a = texts.indexOf(s);
-    if(a==-1)
-        return;
-     cutFreqSel->setCurrentIndex(a);
+  int b = NqLabel.toInt() / 2;
+  QString s = QString::number(b);
+  int a = texts.indexOf(s);
+  if(a==-1)
+      return;
+   cutFreqSel->setCurrentIndex(a);
 }
 
 void plotFilter::closeEvent(QCloseEvent *event)
 {
-    event->accept();
-    emit closed(false);
+  event->accept();
+  emit closed(false);
 }
 
 void plotFilter::setActualFreq()
 {
-    _displayActualFreq->setText(cutFreqSel->currentText());
-    _timeWidget->plotData = widget->filterData;
-    _timeWidget->updateGL();
+  _displayActualFreq->setText(cutFreqSel->currentText());
+  _timeWidget->plotData = widget->filterData;
+  _timeWidget->updateGL();
 }

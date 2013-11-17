@@ -40,7 +40,7 @@ float* Utilities::getQuantize()
     float max = 1;
     if((down==1)&&(L==1))
     {
-        int num = std::pow(2,bits);
+        int num = std::pow(2.0,bits);
         float step=2*max/(float)num;
         float* level = new float[num];
         for(int i=0;i<num;i++)
@@ -60,7 +60,7 @@ float* Utilities::getQuantize()
         delete[] level;
         return qData;
     }
-    int num=pow(2,bits);
+    int num = std::pow(2.0,bits);
     float step= 2 * max / (float)num;
 
     float* level = new float[num];
