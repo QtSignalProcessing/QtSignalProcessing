@@ -2,6 +2,8 @@
 
 #include "fftw3.h"
 
+#include <cmath>
+
 #include <QDebug>
 
 AudioHandle::AudioHandle(const char* s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)

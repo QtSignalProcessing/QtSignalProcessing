@@ -2,6 +2,8 @@
 
 #include "axislabel.h"
 
+#include <cmath>
+
 GLBase::GLBase(float *buf,int num,float time,bool sample,int sr,QWidget *parent)
     : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
       width(450), height(280), downSample(1),vIn(1),vDe(0),hIn(1),hshift(0),vshift(0),

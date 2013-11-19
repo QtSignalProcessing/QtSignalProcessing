@@ -2,6 +2,8 @@
 
 #include "axislabel.h"
 
+#include <cmath>
+
 void DrawCircle(float cx, float cy, float r, int num_segments) ;
 
 GLSW::GLSW(float *buf,int num,float time,bool sample,QWidget *parent)

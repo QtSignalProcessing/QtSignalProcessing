@@ -43,7 +43,7 @@ HEADERS  += mainwindow.h \
     glbase.h \
     chebyshevfilter.h
 
-INCLUDEPATH  += ../include
+win32: INCLUDEPATH  += ../include
 
 unix: LIBS += -lsndfile -lfftw3 -lsamplerate
 win32: LIBS += ../lib/win32/sndfile.lib ../lib/win32/fftw3.lib ../lib/win32/samplerate.lib

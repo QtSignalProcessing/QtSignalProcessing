@@ -6,6 +6,8 @@
 
 #include "fftw3.h"
 
+#include <cmath>
+
 GLOSpectrum::GLOSpectrum(float *buf,int num,bool discrete,int sr,QWidget *parent)
     : GLBase(buf,num,parent),
      factor(1),showRange(false),filterData(NULL),

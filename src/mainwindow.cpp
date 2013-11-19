@@ -21,6 +21,7 @@
 #include <QScrollBar>
 #include <QGridLayout>
 #include <QLabel>
+#include <QUrl>
 
 #if QT_VERSION < 0x050000
 #include <phonon/MediaObject>
@@ -323,7 +324,7 @@ MainWindow::~MainWindow()
 void MainWindow::play()
 {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_orgFileName)));
 #else
   QMediaPlayer* player = new QMediaPlayer();
   player->setMedia(QUrl::fromLocalFile(_orgFileName));
@@ -336,11 +337,11 @@ void MainWindow::playSample(){
   Phonon::MediaObject* player;
   if (_sampleFileName == NULL)
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_orgFileName)));
   }
   else
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_sampleFileName));
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_sampleFileName)));
   }
 #else
   QMediaPlayer* player = new QMediaPlayer();
@@ -361,7 +362,7 @@ void MainWindow::playfiltered()
   if(_filteredFileName!=NULL)
   {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_filteredFileName));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_filteredFileName)));
 #else
   QMediaPlayer* player = new QMediaPlayer();
   player->setMedia(QUrl::fromLocalFile(_filteredFileName));
