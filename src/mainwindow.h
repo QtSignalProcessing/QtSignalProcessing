@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <QMainWindow>
 
 class QAction;
@@ -10,24 +12,24 @@ class QComboBox;
 class QCheckBox;
 class QLabel;
 
-class plot;
+class PlotWidget;
 class plotFilter;
 class AudioHandle;
 class Utilities;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+  Q_OBJECT
 
   public:
       MainWindow(QWidget *parent = 0);
       ~MainWindow();
-      plot* _SampledWave;
+      PlotWidget* _SampledWave;
       float *buf1;
       plotFilter* _FilterWidget;
-      plot *_DisSpec;
-      plot *_OrgWave;
-      plot *_ConSpec;
+      PlotWidget *_DisSpec;
+      PlotWidget *_OrgWave;
+      PlotWidget *_ConSpec;
       QSpinBox *bitBox;
       int currentNum;
       int L;
@@ -41,7 +43,7 @@ class MainWindow : public QMainWindow
       void updateFilter();
       float getMax(float *a,int num);
 
-  public   slots:
+  public slots:
       void play();
       void playSample();
       void playfiltered();
@@ -118,7 +120,7 @@ class MainWindow : public QMainWindow
       QCheckBox* _showSampleRange;
       QCheckBox* _showOnePeriod;
       bool loadingFailed;
-	  QCheckBox* _addNoise;
+      QCheckBox* _addNoise;
       QComboBox* _selectNoise;
       float* _orgData;
       QString _orgFileName;

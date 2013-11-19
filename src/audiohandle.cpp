@@ -1,22 +1,25 @@
 #include "audiohandle.h"
-#include<iostream>
-#include"fftw3.h"
+
+#include "fftw3.h"
+
 #include <cmath>
-using namespace std;
+
+#include <QDebug>
+
 AudioHandle::AudioHandle(const char* s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)
 {
-    info.format = 0;
-           sf = sf_open(s,SFM_READ,&info); //(s.toSdtString().c_str())
-           if (sf == NULL)
-               {
-               cout<<"Failed to open the file."<<endl;
-               info.channels = 1;
-               info.frames = 20000;
-               info.samplerate = 11025;
-               info.format = 65541;
-               info.sections = 1;
-               info.seekable =1;
-               }
+  info.format = 0;
+  sf = sf_open(s,SFM_READ,&info); //(s.toSdtString().c_str())
+  if (sf == NULL)
+  {
+    qDebug() << "Failed to open the file.";
+    info.channels = 1;
+    info.frames = 20000;
+    info.samplerate = 11025;
+    info.format = 65541;
+    info.sections = 1;
+    info.seekable =1;
+  }
 }
 
 AudioHandle::~AudioHandle()

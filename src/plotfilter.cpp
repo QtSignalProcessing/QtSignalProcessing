@@ -1,16 +1,20 @@
 #include "plotfilter.h"
-#include<QLabel>
-#include<QLineEdit>
-#include<QScrollBar>
-#include<QToolButton>
-#include<QCloseEvent>
-#include<iostream>
-using namespace std;
+
+#include "glospectrum.h"
+#include "glsw.h"
+
+#include <QLabel>
+#include <QHBoxLayout>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QToolButton>
+#include <QCloseEvent>
+
 plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) :
     QWidget(parent)
 {
     this->sr=sr;
-    name=new QLabel(this);
+    name = new QLabel(this);
     font.setBold(true);
     font.setPointSize(10);
     name->setText("Anti-aliasing filter");
@@ -46,7 +50,7 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
         rip->setVisible(false);
     }
     connect(filterSelect,SIGNAL(currentIndexChanged(int)),this,SLOT(filterChanged(int)));
-    orderL=new QHBoxLayout(this);
+    QHBoxLayout* orderL=new QHBoxLayout(this);
     OrderIsToHigh = new QLabel(this);
     OrderIsToHigh->setText("Order is too high!");
     OrderIsToHigh->setStyleSheet("QLabel {  color : red; }");
@@ -136,51 +140,50 @@ void plotFilter::filterChanged(int index)
 
 GLOSpectrum* plotFilter::getWidget()
 {
-    return this->widget;
+  return this->widget;
 }
 
 GLSW* plotFilter::getGLWidget()
 {
-    return _timeWidget;
+  return _timeWidget;
 }
 
 void plotFilter::setComboText(QString string)
 {
-
-   NqLabel = string;
-   int b;
-   if(NqLabel.toInt()==11025 || NqLabel.toInt() == 44100)
-   {
-        b = NqLabel.toInt();
-   }
-   else
-    b = NqLabel.toInt() / 2;
-   QString s = QString::number(b);
-   int a = texts.indexOf(s);
-   if(a==-1)
-       return;
-    cutFreqSel->setCurrentIndex(a);
+ NqLabel = string;
+ int b;
+ if(NqLabel.toInt()==11025 || NqLabel.toInt() == 44100)
+ {
+      b = NqLabel.toInt();
+ }
+ else
+  b = NqLabel.toInt() / 2;
+ QString s = QString::number(b);
+ int a = texts.indexOf(s);
+ if(a==-1)
+     return;
+  cutFreqSel->setCurrentIndex(a);
 }
 
 void plotFilter::setCutFreqToNy()
 {
-    int b = NqLabel.toInt() / 2;
-    QString s = QString::number(b);
-    int a = texts.indexOf(s);
-    if(a==-1)
-        return;
-     cutFreqSel->setCurrentIndex(a);
+  int b = NqLabel.toInt() / 2;
+  QString s = QString::number(b);
+  int a = texts.indexOf(s);
+  if(a==-1)
+      return;
+   cutFreqSel->setCurrentIndex(a);
 }
 
 void plotFilter::closeEvent(QCloseEvent *event)
 {
-    event->accept();
-    emit closed(false);
+  event->accept();
+  emit closed(false);
 }
 
 void plotFilter::setActualFreq()
 {
-    _displayActualFreq->setText(cutFreqSel->currentText());
-    _timeWidget->plotData = widget->filterData;
-    _timeWidget->updateGL();
+  _displayActualFreq->setText(cutFreqSel->currentText());
+  _timeWidget->plotData = widget->filterData;
+  _timeWidget->updateGL();
 }

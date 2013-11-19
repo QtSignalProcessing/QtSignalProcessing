@@ -1,12 +1,13 @@
 #ifndef GLOSPECTRUM_H
 #define GLOSPECTRUM_H
-#include "axislabel.h"
-#include <QGLWidget>
+
 #include"glbase.h"
+
 class GLOSpectrum : public GLBase
 {
     Q_OBJECT
-public:
+
+  public:
     GLOSpectrum(float *buf,int num,bool discrete,int sr,QWidget *parent = 0);
     ~GLOSpectrum();
     float factor;//current sampling rate propotional to the Nyquist rate;
@@ -45,10 +46,10 @@ public:
     bool get1Period();
     GLOSpectrum* getWidget();
 
-protected:
+  protected:
     void paintGL();
 
-private:
+  private:
     double* getAmplitude(int num, double *in);
     void computeCurrent();
     void plotXAxis();
@@ -68,11 +69,13 @@ private:
     int _currentYmax;
     QVector<float> ycord;
     QVector<float> yl;
-signals:
+
+  signals:
    void OrderTooHigh(bool);
    void RippleNotValid(bool);
    void TooManyPeriods(bool);
-public slots:
+
+  public slots:
     void resetV();
     void vIncrease();
     void vDecrease();

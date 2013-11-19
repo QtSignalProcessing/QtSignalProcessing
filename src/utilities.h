@@ -1,10 +1,9 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
-#include <samplerate.h>
-#include<stdio.h>
+
 class Utilities
 {
-public:
+  public:
     Utilities(float* data,int number);
     ~Utilities();
     void setBit(int bits);
@@ -19,7 +18,7 @@ public:
     int computeTrueBits();
     void setOnlyFiltered(bool onlyFiltered);
 
-private:
+  private:
     int bits;
     int L;
     int down;
@@ -37,7 +36,3 @@ private:
 };
 
 #endif // UTILITIES_H
-/*
-
-
-  */

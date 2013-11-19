@@ -1,9 +1,10 @@
 #include "iir.h"
-#include<math.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<iostream>
-using namespace std;
+
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
+
 /********************************************************************************
 Filters waveform x using filter weights a and b.
 
