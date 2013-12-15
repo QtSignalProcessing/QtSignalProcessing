@@ -1,11 +1,9 @@
 #include "mainwindow.h"
 
-#include "plotwidget.h"
+#include "plot.h"
 #include "utilities.h"
 #include "audiohandle.h"
 #include "plotfilter.h"
-#include "glsw.h"
-#include "glospectrum.h"
 
 #include <QMouseEvent>
 #include <QComboBox>
@@ -17,11 +15,6 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QApplication>
-#include <QToolButton>
-#include <QScrollBar>
-#include <QGridLayout>
-#include <QLabel>
-#include <QUrl>
 
 #if QT_VERSION < 0x050000
 #include <phonon/MediaObject>
@@ -36,19 +29,13 @@ MainWindow::MainWindow(QWidget *parent)
 {
     createActions();
     createMenus();
-    ria = new AudioHandle(QString("helloDSP.wav").toStdString().c_str());
+    ria = new AudioHandle(QString("NULL"));
     _orgFileName = "helloDSP.wav";
     main=new QWidget(this);
     this->setCentralWidget(main);
     createWidget(main);
     this->setWindowTitle("DSP Demo - University of Konstanz");
     this->show();
-    if(loadingFailed)
-    {
-        QMessageBox error;
-        error.setText("Default audio file open failed, and sin signal with noise will be shown");
-        error.exec();
-    }
 }
 
 void MainWindow::initializeVar()
@@ -86,7 +73,7 @@ void MainWindow::initializeVar()
         buf1 = (float*)malloc(sizeof(float)*num);
         sr = 11025;
         for(int i = 0; i< 20000;i++)
-            buf1[i] = (sin((double)i/1000.0)+sin((double)i))/2.0;
+            buf1[i] = (sin(i/1000.0)+sin(i))/2;
         _orgData = (float*)malloc(num*sizeof(float));
         for(int i =0; i < currentNum; i++)
             _orgData[i] =buf1[i] ;
@@ -101,14 +88,14 @@ void MainWindow::createWidget(QWidget *main)
      initializeVar();
     //create the widget Plot Sampled waveform
     utilities=new Utilities(buf1,num);
-    _SampledWave = new PlotWidget(buf1,num,time,true,main);
+    _SampledWave=new plot(buf1,num,time,true,main);
     //create the widget to plot the oroginal waveform
-    _OrgWave = new PlotWidget(buf1,num,time,false,main);
-    discrete = false;
+    _OrgWave=new plot(buf1,num,time,false,main);
+    discrete=false;
     //create the widget for the continuous-time spectrum
-    _ConSpec = new PlotWidget(buf1,num,discrete,sr,main);
+    _ConSpec=new plot(buf1,num,discrete,sr,main);
     //discrete-time spectrum
-    _DisSpec=new PlotWidget(buf1,num,true,sr,main);
+    _DisSpec=new plot(buf1,num,true,sr,main);
     _OrgWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _ConSpec->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _SampledWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
@@ -166,7 +153,7 @@ void MainWindow::createWidget(QWidget *main)
     ConpLayout->addWidget(_ConSpec,0,2);
     ConpLayout->addWidget(_SampledWave,2,0);
     ConpLayout->addWidget(_DisSpec,2,2);
-    connect(_DisSpec->getWidget(),SIGNAL(TooManyPeriods(bool)),this,SLOT(frozenScaling(bool)));
+   // connect(_DisSpec->getWidget(),SIGNAL(TooManyPeriods(bool)),this,SLOT(frozenScaling(bool)));
     QToolButton *playB=new QToolButton(main);
     playB->setText("play");
     playB->connect(playB,SIGNAL(clicked()),this,SLOT(play()));
@@ -220,7 +207,7 @@ void MainWindow::createWidget(QWidget *main)
         texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
                QString::number(20000)<<QString::number(10000)<<QString::number(5000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100);
+               QString::number(200)<<QString::number(100)<<QString::number(18000);
     }
     sampleRateSelect->addItems(texts);
     connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),this,SLOT(nonIntSr(QString)));
@@ -316,6 +303,7 @@ void MainWindow::createWidget(QWidget *main)
     connect(_FilterWidget,SIGNAL(closed(bool)),this,SLOT(showFilter(bool)));
 }
 
+
 MainWindow::~MainWindow()
 {
 
@@ -324,7 +312,7 @@ MainWindow::~MainWindow()
 void MainWindow::play()
 {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_orgFileName)));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
   player->setMedia(QUrl::fromLocalFile(_orgFileName));
@@ -337,11 +325,13 @@ void MainWindow::playSample(){
   Phonon::MediaObject* player;
   if (_sampleFileName == NULL)
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_orgFileName)));
+      qDebug()<<" _sampleFileName=NULL";
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
   }
   else
   {
-    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_sampleFileName)));
+      qDebug()<<" _sampleFileName!=NULL"<<_sampleFileName;
+    player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_sampleFileName));
   }
 #else
   QMediaPlayer* player = new QMediaPlayer();
@@ -362,7 +352,7 @@ void MainWindow::playfiltered()
   if(_filteredFileName!=NULL)
   {
 #if QT_VERSION < 0x050000
-  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(QUrl::fromLocalFile(_filteredFileName)));
+  Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_filteredFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
   player->setMedia(QUrl::fromLocalFile(_filteredFileName));
@@ -374,7 +364,6 @@ void MainWindow::playfiltered()
 void MainWindow::open()
 {
         _orgFileName = QFileDialog::getOpenFileName(this);
-
         if (!_orgFileName.isEmpty())
             loadFile(_orgFileName);
 }
@@ -389,20 +378,20 @@ void MainWindow::about()
 
 void MainWindow::createActions()
 {
-  openAct = new QAction(tr("&Open..."), this);
-  openAct->setShortcuts(QKeySequence::Open);
-  openAct->setStatusTip(tr("Open an existing file"));
-  connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
-  exitAct = new QAction(tr("E&xit"), this);
-  exitAct->setShortcuts(QKeySequence::Quit);
-  exitAct->setStatusTip(tr("Exit the application"));
-  connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
-  aboutAct = new QAction(tr("&About"), this);
-  aboutAct->setStatusTip(tr("Show the application's About box"));
-  connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
-  aboutQtAct = new QAction(tr("About &Qt"), this);
-  aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
-  connect(aboutQtAct, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+    openAct = new QAction(tr("&Open..."), this);
+    openAct->setShortcuts(QKeySequence::Open);
+    openAct->setStatusTip(tr("Open an existing file"));
+    connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
+    exitAct = new QAction(tr("E&xit"), this);
+    exitAct->setShortcuts(QKeySequence::Quit);
+    exitAct->setStatusTip(tr("Exit the application"));
+    connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
+    aboutAct = new QAction(tr("&About"), this);
+    aboutAct->setStatusTip(tr("Show the application's About box"));
+    connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
+    aboutQtAct = new QAction(tr("About &Qt"), this);
+    aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
+    connect(aboutQtAct, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 }
 
 void MainWindow::createMenus()
@@ -419,24 +408,25 @@ void MainWindow::createMenus()
 //load in the selected audio file(need to add the filtering of the file types)
 void MainWindow::loadFile(const QString &fileName)
 {
-    char *s = fileName.toLatin1().data();
+
     if(ria!=NULL)
         delete ria;
-    ria = new AudioHandle(s);
+    ria = new AudioHandle(fileName);
+    _sampleFileName = "";
     initializeVar();
     QStringList texts;
    if(sr==11025)
     {
         texts<<QString::number(sr)<<QString::number(10000)<<QString::number(5000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100);
+               QString::number(200)<<QString::number(100)<<QString::number(sr/3)<<QString::number(4500)<<QString::number(4800);
     }
     else if(sr == 44100)
     {
         texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
                QString::number(20000)<<QString::number(10000)<<QString::number(5000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100);
+               QString::number(200)<<QString::number(100)<<QString::number(sr/2)<<QString::number(15000)<<QString::number(18000)<<QString::number(8000);
     }
    updateFilter();
    sampleRateSelect->blockSignals(true);
@@ -478,6 +468,9 @@ void MainWindow::loadOrgwave()
 {
     _OrgWave->getGlwidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
     _OrgWave->getGlwidget()->updateLabel(time,0);
+    _OrgWave->getGlwidget()->updateYLabel(10,-10);
+    _OrgWave->getGlwidget()->vIncrease();
+    _OrgWave->getGlwidget()->vDecrease();
     _OrgWave->getGlwidget()->resetCommon();
     _OrgWave->getGlwidget()->resetV();
     _OrgWave->getGlwidget()->resetH();
@@ -485,10 +478,14 @@ void MainWindow::loadOrgwave()
 
 void MainWindow::loadSample()
 {
+     _SampledWave->getGlwidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
     _SampledWave->getGlwidget()->setSampleFactors(0,0);
     _SampledWave->getGlwidget()->sampleOrNot=true;
-     _SampledWave->getGlwidget()->updateLabel(time,0);
-    _SampledWave->getGlwidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
+    _SampledWave->getGlwidget()->updateLabel(time,0);
+    _SampledWave->getGlwidget()->updateYLabel(10,-10);
+    _SampledWave->getGlwidget()->vIncrease();
+    _SampledWave->getGlwidget()->vDecrease();
+
     _SampledWave->getGlwidget()->resetCommon();
     _SampledWave->getGlwidget()->resetV();
     _SampledWave->getGlwidget()->resetH();
@@ -506,423 +503,439 @@ void MainWindow::loadCSpec()
 
 void MainWindow::loadDSpec()
 {
-  _DisSpec->getWidget()->resetCommon();
-  _DisSpec->getWidget()->discrete = true;
-  _DisSpec->getWidget()->resetSpec(buf1,num,sr);
-  _DisSpec->getWidget()->resetV();
-  _DisSpec->getWidget()->resetH();
+    _DisSpec->getWidget()->resetCommon();
+    _DisSpec->getWidget()->discrete = true;
+    _DisSpec->getWidget()->resetSpec(buf1,num,sr);
+    _DisSpec->getWidget()->resetV();
+    _DisSpec->getWidget()->resetH();
 }
 
 void MainWindow::updateFilter()
 {
-  _FilterWidget->getWidget()->resetCommon();
-  _FilterWidget->getWidget()->resetSpec(buf1,num,sr);
-  _FilterWidget->getGLWidget()->resetCommon();
-   _FilterWidget->getGLWidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
-   _FilterWidget->getGLWidget()->updateLabel(time,0);
-  QStringList texts;
-  if(sr==11025)
-  {
-    texts<<QString::number(11025)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
-           QString::number(2000)<<QString::number(1000)<<
-           QString::number(500)<<QString::number(250)<<
-           QString::number(200)<<QString::number(100);
-  }
-  if(sr == 44100)
-  {
-    texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
-           QString::number(20000)<<QString::number(15000)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
-           QString::number(2000)<<QString::number(1000)<<QString::number(500)<<QString::number(250)<<
-           QString::number(200)<<QString::number(100);
-  }
-  _FilterWidget->texts.clear();
-  _FilterWidget->texts = texts;
-  _FilterWidget->cutFreqSel->clear();
-  _FilterWidget->numOfOrder->setText("2");
-  _FilterWidget->cutFreqSel->addItems(_FilterWidget->texts);
-  _FilterWidget->getWidget()->Filter();
-  _FilterWidget->setActualFreq();
-  _FilterWidget->getWidget()->updateGL();
+    _FilterWidget->getWidget()->resetCommon();
+    _FilterWidget->getWidget()->resetSpec(buf1,num,sr);
+    _FilterWidget->getGLWidget()->resetCommon();
+     _FilterWidget->getGLWidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
+     _FilterWidget->getGLWidget()->updateLabel(time,0);
+    QStringList texts;
+    if(sr==11025)
+    {
+        texts<<QString::number(11025)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
+               QString::number(2000)<<QString::number(1000)<<
+               QString::number(500)<<QString::number(250)<<
+               QString::number(200)<<QString::number(100);
+    }
+    if(sr == 44100)
+    {
+        texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
+               QString::number(20000)<<QString::number(15000)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
+               QString::number(2000)<<QString::number(1000)<<QString::number(500)<<QString::number(250)<<
+               QString::number(200)<<QString::number(100)<<QString::number(sr/2)<<QString::number(18000);
+    }
+    _FilterWidget->texts.clear();
+    _FilterWidget->texts = texts;
+    _FilterWidget->cutFreqSel->clear();
+    _FilterWidget->numOfOrder->setText("2");
+    _FilterWidget->cutFreqSel->addItems(_FilterWidget->texts);
+    _FilterWidget->getWidget()->Filter();
+    _FilterWidget->setActualFreq();
+    _FilterWidget->getWidget()->updateGL();
 }
 
 
 float MainWindow::getMax(float *a,int num)
 {
-  float max=a[0];
-  for(int i=1;i<num;i++)
-    if(max<a[i])
-      max=a[i];
-  return max+0.1*max;
+    float max=a[0];
+    for(int i=1;i<num;i++)
+        if(max<a[i])
+            max=a[i];
+    return max+0.1*max;
 }
 
 void MainWindow::plot2Freq()
 {
-  if(show2Spec->isChecked())
-  {
-    conFirst->setDisabled(false);
-    disFirst->setDisabled(false);
-  }
-  if(!show2Spec->isChecked())
-  {
-    conFirst->setDisabled(true);
-    disFirst->setDisabled(true);
-    conFirst->setChecked(false);
-    disFirst->setChecked(false);
-  }
+    if(show2Spec->isChecked())
+    {
+        conFirst->setDisabled(false);
+        disFirst->setDisabled(false);
+        _DisSpec->getWidget()->conDis();
+        onlyCon();
+    }
+    if(!show2Spec->isChecked())
+    {
+        conFirst->setDisabled(true);
+        disFirst->setDisabled(true);
+        conFirst->setChecked(false);
+        disFirst->setChecked(false);
+    }
 }
 
 void MainWindow::onlyCon()
 {
-  disFirst->setChecked(false);
-  conFirst->setChecked(true);
+    disFirst->setChecked(false);
+    conFirst->setChecked(true);
 }
 void MainWindow::onlyDis()
 {
-  disFirst->setChecked(true);
-  conFirst->setChecked(false);
+    disFirst->setChecked(true);
+    conFirst->setChecked(false);
 }
+
 
 void MainWindow::showFilter(bool i)
 {
-  if(i)
-  {
-    alreadyFiltered = true;
-    appFilter=true;
-    _FilterWidget->getWidget()->showFilter=true;
-    _FilterWidget->getWidget()->Filter();
-    _FilterWidget->show();
+    if(i)
+    {
+        alreadyFiltered = true;
+        appFilter=true;
+        _FilterWidget->getWidget()->showFilter=true;
+        _FilterWidget->getWidget()->Filter();
+        _FilterWidget->show();
+        getFilterdata();
+        _FilterWidget->getGLWidget()->plotData = filterData;
+
+        utilities->setFilterData(filterData);
+        sampleData = utilities->getSampleData(false);
+        _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
+        // void writeToWave(float* data,char* filename,float sr,int size);
+        _SampledWave->getGlwidget()->plotData=sampleData;
+        _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
+        _SampledWave->getGlwidget()->updateGL();
+        _DisSpec->getWidget()->plotData=sampleData;
+        _DisSpec->getWidget()->setL(L,currentNum,down,true);
+        _DisSpec->getWidget()->updateGL();
+      //  sampleRateSelect->setEnabled(!i);
+        _selFilter->setChecked(true);
+    }
+    else
+    {
+        _FilterWidget->hide();
+        appFilter=false;
+        _FilterWidget->getGLWidget()->plotData = buf1;
+        if(L==1 && down ==1)
+        {
+            sampleData = buf1;
+        }
+        else
+        {
+            sampleData = utilities->getSampleData(true);
+        }
+         _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
+          _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
+        _SampledWave->getGlwidget()->plotData=sampleData;
+        _SampledWave->getGlwidget()->updateGL();
+        _DisSpec->getWidget()->plotData=sampleData;
+        _DisSpec->getWidget()->setL(L,currentNum,down,false);
+        _DisSpec->getWidget()->updateGL();
+      //  sampleRateSelect->setEnabled(!i);
+        _selFilter->setChecked(false);
+    }
+}
+
+int MainWindow::gcd(int v1,int v2)
+{
+    while(v2)
+    {
+        int temp=v2;
+        v2=v1%v2;
+        v1=temp;
+    }
+    return v1;
+}
+
+void MainWindow::nonIntSr(QString s)
+{
+    int nums=s.toInt();
+    if(nums==0||nums==-1||nums==sr)
+    {
+        L=1;
+        down=1;
+    }
+    else
+    {
+        int Gcd=gcd(nums,sr);
+        L=nums/Gcd;
+        down=sr/Gcd;
+
+    }
+
+    currentNum=num*L/down;
+    utilities->setSampleFactor(L,down,currentNum);
+    sampleData = utilities->getSampleData(!appFilter);
+    _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
+    _SampledWave->getGlwidget()->plotData=sampleData;
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),nums,currentNum);
+    _DisSpec->getWidget()->plotData=sampleData;
+    _DisSpec->getWidget()->setL(L,currentNum,down,false);
+}
+
+void MainWindow::getFilterdata()
+{
+    this->filterData=_FilterWidget->getWidget()->filterData;
+}
+
+void MainWindow::applyFilters()
+{
     getFilterdata();
-    _FilterWidget->getGLWidget()->plotData = filterData;
+    _filteredFileName = QDir::tempPath()+"/tmp2.wav";
+    ria->writeToWave(filterData,_filteredFileName.toLatin1().data(),sr,num);
+    if(L==1&&down==1)
+    {
+        utilities->setOnlyFiltered(true);
+    }
+    else
+    {
+        utilities->setOnlyFiltered(false);
+    }
     utilities->setFilterData(filterData);
     sampleData = utilities->getSampleData(false);
-    _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
     _SampledWave->getGlwidget()->plotData=sampleData;
+    _FilterWidget->getGLWidget()->updateGL();
+    _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
     ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
     _SampledWave->getGlwidget()->updateGL();
     _DisSpec->getWidget()->plotData=sampleData;
     _DisSpec->getWidget()->setL(L,currentNum,down,true);
     _DisSpec->getWidget()->updateGL();
-    _selFilter->setChecked(true);
-  }
-  else
-  {
-    _FilterWidget->hide();
-    appFilter=false;
-    _FilterWidget->getGLWidget()->plotData = buf1;
-    if(L==1 && down ==1)
-    {
-      sampleData = buf1;
-    }
-    else
-    {
-      sampleData = utilities->getSampleData(true);
-    }
-     _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
-      _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-    _SampledWave->getGlwidget()->plotData=sampleData;
-    _SampledWave->getGlwidget()->updateGL();
-    _DisSpec->getWidget()->plotData=sampleData;
-    _DisSpec->getWidget()->setL(L,currentNum,down,false);
-    _DisSpec->getWidget()->updateGL();
-    _selFilter->setChecked(false);
-  }
-}
-
-int MainWindow::gcd(int v1,int v2)
-{
-  while(v2)
-  {
-    int temp=v2;
-    v2=v1%v2;
-    v1=temp;
-  }
-  return v1;
-}
-
-void MainWindow::nonIntSr(QString s)
-{
-  int nums=s.toInt();
-  if(nums==0||nums==-1||nums==sr)
-  {
-    L=1;
-    down=1;
-  }
-  else
-  {
-    int Gcd=gcd(nums,sr);
-    L=nums/Gcd;
-    down=sr/Gcd;
-  }
-  currentNum=num*L/down;
-  utilities->setSampleFactor(L,down,currentNum);
-  sampleData = utilities->getSampleData(!appFilter);
-  _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
-  _SampledWave->getGlwidget()->plotData=sampleData;
-  _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-  ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),nums,currentNum);
-  _DisSpec->getWidget()->plotData=sampleData;
-  _DisSpec->getWidget()->setL(L,currentNum,down,false);
-}
-
-void MainWindow::getFilterdata()
-{
-  this->filterData=_FilterWidget->getWidget()->filterData;
-}
-
-void MainWindow::applyFilters()
-{
-  getFilterdata();
-  _filteredFileName = QDir::tempPath()+"/tmp2.wav";
-  ria->writeToWave(filterData,_filteredFileName.toLatin1().data(),sr,num);
-  if(L==1&&down==1)
-  {
-      utilities->setOnlyFiltered(true);
-  }
-  else
-  {
-      utilities->setOnlyFiltered(false);
-  }
-  utilities->setFilterData(filterData);
-  sampleData = utilities->getSampleData(false);
-  _SampledWave->getGlwidget()->plotData=sampleData;
-  _FilterWidget->getGLWidget()->updateGL();
-  _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
-  _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-  ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-  _SampledWave->getGlwidget()->updateGL();
-  _DisSpec->getWidget()->plotData=sampleData;
-  _DisSpec->getWidget()->setL(L,currentNum,down,true);
-  _DisSpec->getWidget()->updateGL();
 }
 
 void MainWindow::resetW1()
 {
-  _OrgWave->hSc->setSliderPosition(0);
-  _SampledWave->hSc->setSliderPosition(0);
+    _OrgWave->hSc->setSliderPosition(0);
+    _SampledWave->hSc->setSliderPosition(0);
 }
 
 void MainWindow::bindWaveScroll(int s)
 {
- _SampledWave->hSc->setSliderPosition(s);
- _OrgWave->hSc->setSliderPosition(s);
+   _SampledWave->hSc->setSliderPosition(s);
+   _OrgWave->hSc->setSliderPosition(s);
 }
 
 void MainWindow::resetSp()
 {
-  _ConSpec->hSc->setSliderPosition(0);
-  _DisSpec->hSc->setSliderPosition(0);
+    _ConSpec->hSc->setSliderPosition(0);
+    _DisSpec->hSc->setSliderPosition(0);
 }
 
 void MainWindow::bindSpecScroll(int s)
 {
-  _ConSpec->hSc->setSliderPosition(s);
-  _DisSpec->hSc->setSliderPosition(s);
+    _ConSpec->hSc->setSliderPosition(s);
+    _DisSpec->hSc->setSliderPosition(s);
 }
 
 void MainWindow::vresetW1()
 {
-  _OrgWave->vSc->setSliderPosition(0);
-  _SampledWave->vSc->setSliderPosition(0);
+    _OrgWave->vSc->setSliderPosition(0);
+    _SampledWave->vSc->setSliderPosition(0);
 }
 
 void MainWindow::vbindWaveScroll(int s)
 {
-  _OrgWave->vSc->setSliderPosition(s);
-  _SampledWave->vSc->setSliderPosition(s);
+    _OrgWave->vSc->setSliderPosition(s);
+    _SampledWave->vSc->setSliderPosition(s);
 }
 
 void MainWindow::vresetSp()
 {
-  _ConSpec->hSc->setSliderPosition(0);
-  _DisSpec->hSc->setSliderPosition(0);
+    _ConSpec->hSc->setSliderPosition(0);
+    _DisSpec->hSc->setSliderPosition(0);
 }
 
 void MainWindow::vbindSpecScroll(int s)
 {
-  _ConSpec->vSc->setSliderPosition(s);
-  _DisSpec->vSc->setSliderPosition(s);
+    _ConSpec->vSc->setSliderPosition(s);
+    _DisSpec->vSc->setSliderPosition(s);
 }
 
 void MainWindow::setBits(int bits)
 {
-  this->bits = bits;
-  utilities->setBit(bits);
-  qData = utilities->getQuantize();
-  _SampledWave->getGlwidget()->plotData = qData;
-  _DisSpec->getWidget()->plotData = qData;
-  _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-  ria->writeToWave(qData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-  if(bits >= _trueBits)
-  {
-    SNR->setText("inf");
-    _SampledWave->getGlwidget()->updateGL();
-  }
-  else
-  {
-    double error=  utilities->computeError();
-    double snr = utilities->getSNR(error);
-    _SampledWave->getGlwidget()->setSNR(snr);
-    _SampledWave->getGlwidget()->updateGL();
-  }
+    this->bits = bits;
+    utilities->setBit(bits);
+    qData = utilities->getQuantize();
+    _SampledWave->getGlwidget()->plotData = qData;
+    _DisSpec->getWidget()->plotData = qData;
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(qData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
+    if(bits >= _trueBits)
+    {
+        SNR->setText("inf");
+        _SampledWave->getGlwidget()->updateGL();
+    }
+    else
+    {
+        double error=  utilities->computeError();
+        double snr = utilities->getSNR(error);
+        _SampledWave->getGlwidget()->setSNR(snr);
+        _SampledWave->getGlwidget()->updateGL();
+    }
 }
 
 void MainWindow::resetEverything()
 {
-  vresetSp();
-  vresetW1();
-  resetSp();
-  resetW1();
-  sampleRateSelect->setCurrentIndex(0);
-  _showOnePeriod->setChecked(false);
-  _showSampleRange->setChecked(false);
-  show2Spec->setChecked(false);
-  conFirst->setChecked(false);
-  disFirst->setChecked(false);
-  _selFilter->setChecked(false);
-  _showAliasing->setChecked(false);
-  SNR->setText("inf");
-  sampleRateSelect->setEnabled(true);
-  bitBox->setEnabled(true);
+    vresetSp();
+    vresetW1();
+    resetSp();
+    resetW1();
+    sampleRateSelect->setCurrentIndex(0);
+    _showOnePeriod->setChecked(false);
+    _showSampleRange->setChecked(false);
+    show2Spec->setChecked(false);
+    conFirst->setChecked(false);
+    disFirst->setChecked(false);
+    _selFilter->setChecked(false);
+    _showAliasing->setChecked(false);
+    SNR->setText("inf");
+    sampleRateSelect->setEnabled(true);
+    bitBox->setEnabled(true);
 }
 
 void MainWindow::frozenScaling(bool i)
 {
-  _ConSpec->getWidget()->setBanned(i);
-  _ConSpec->hSc->setEnabled(!i);
-  _ConSpec->vSc->setEnabled(!i);
-  _ConSpec->hPlus->setEnabled(!i);
-  _ConSpec->vPlus->setEnabled(!i);
-  _ConSpec->hMinus->setEnabled(!i);
-  _ConSpec->vMinus->setEnabled(!i);
+   _ConSpec->getWidget()->setBanned(i);
+    _ConSpec->hSc->setEnabled(!i);
+    _ConSpec->vSc->setEnabled(!i);
+    _ConSpec->hPlus->setEnabled(!i);
+    _ConSpec->vPlus->setEnabled(!i);
+    _ConSpec->hMinus->setEnabled(!i);
+    _ConSpec->vMinus->setEnabled(!i);
 }
 
 void MainWindow::displayAliasing(bool i)
 {
-  _DisSpec->getWidget()->setShowAliasing(i);
-  sampleRateSelect->setEnabled(!i);
-  bitBox->setEnabled(!i);
-  resetSp();
-  vresetSp();
+    _DisSpec->getWidget()->setShowAliasing(i);
+    sampleRateSelect->setEnabled(!i);
+    bitBox->setEnabled(!i);
+    resetSp();
+    vresetSp();
 }
 
 void MainWindow::wheelEvent(QWheelEvent *e)
 {
-  if(e->pos().x() > _OrgWave->pos().x() && e->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
-  {
-    if(e->delta()>0)
+    if(e->pos().x() > _OrgWave->pos().x() && e->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
     {
-      double p = e->pos().x();
-      p = (float)p/_OrgWave->hSc->width() * 100 -50;
-      _OrgWave->getGlwidget()->setHshift(p);
-      _SampledWave->getGlwidget()->setHshift(p);
-      _OrgWave->getGlwidget()->hIncrease();
-      _SampledWave->getGlwidget()->hIncrease();
-      qDebug()<<_ConSpec->pos();
+        if(e->delta()>0)
+        {
+            double p = e->pos().x();
+            p = (float)p/_OrgWave->hSc->width() * 100 -50;
+
+            _OrgWave->getGlwidget()->setHshift(p);
+            _SampledWave->getGlwidget()->setHshift(p);
+            _OrgWave->getGlwidget()->hIncrease();
+            _SampledWave->getGlwidget()->hIncrease();
+
+        }
+        else
+        {
+
+            double p = e->pos().x();
+            p = (float)p/_OrgWave->hSc->width() * 100 -50;
+            _OrgWave->getGlwidget()->setHshift(p);
+            _SampledWave->getGlwidget()->setHshift(p);
+            _OrgWave->getGlwidget()->hDecrease();
+            _SampledWave->getGlwidget()->hDecrease();
+        }
     }
-    else
+    else if(e->pos().x() > _ConSpec->pos().x() && e->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
     {
-      double p = e->pos().x();
-      p = (float)p/_OrgWave->hSc->width() * 100 -50;
-      _OrgWave->getGlwidget()->setHshift(p);
-      _SampledWave->getGlwidget()->setHshift(p);
-      _OrgWave->getGlwidget()->hDecrease();
-      _SampledWave->getGlwidget()->hDecrease();
+        if(e->delta()>0)
+        {
+            _DisSpec->getWidget()->hIncrease();
+            _ConSpec->getWidget()->hIncrease();
+        }
+        else
+        {
+            _DisSpec->getWidget()->hDecrease();
+            _ConSpec->getWidget()->hDecrease();
+        }
     }
-  }
-  else if(e->pos().x() > _ConSpec->pos().x() && e->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
-  {
-    if(e->delta()>0)
-    {
-      _DisSpec->getWidget()->hIncrease();
-      _ConSpec->getWidget()->hIncrease();
-    }
-    else
-    {
-      _DisSpec->getWidget()->hDecrease();
-      _ConSpec->getWidget()->hDecrease();
-    }
-  }
+
 }
 
 void MainWindow::mouseMoveEvent(QMouseEvent *event)
 {
-  if(event->buttons() & Qt::LeftButton)
-  {
-    if(event->pos().x() > _OrgWave->pos().x() && event->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
+    if(event->buttons() & Qt::LeftButton)
     {
-      double p = event->pos().x();
-      p = (float)p/_OrgWave->width() * 100 -50;
-      _OrgWave->getGlwidget()->setHshift(p);
-      _SampledWave->getGlwidget()->setHshift(p);
-      _OrgWave->hSc->blockSignals(true);
-      _SampledWave->hSc->blockSignals(true);
-      bindWaveScroll(p);
-      _OrgWave->hSc->blockSignals(false);
-      _SampledWave->hSc->blockSignals(false);
+        if((event->pos().x() >= _OrgWave->pos().x()) && (event->pos().x()<= _OrgWave->pos().x()+_OrgWave->width()))
+        {
+            double p = event->pos().x();
+            p = (double)p/_OrgWave->width() * 100 -50;
+            _OrgWave->getGlwidget()->setHshift(p);
+            _SampledWave->getGlwidget()->setHshift(p);
+            _OrgWave->hSc->blockSignals(true);
+            _SampledWave->hSc->blockSignals(true);
+            bindWaveScroll(p);
+            _OrgWave->hSc->blockSignals(false);
+            _SampledWave->hSc->blockSignals(false);
+        }
+        else if(event->pos().x() > _ConSpec->pos().x() && event->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
+        {
+            double p = event->pos().x()-_ConSpec->pos().x();
+
+            p = (double)p/_ConSpec->hSc->width() * 100 -50;
+            _DisSpec->hSc->blockSignals(true);
+            _ConSpec->hSc->blockSignals(true);
+            bindSpecScroll(p);
+            _DisSpec->hSc->blockSignals(false);
+            _ConSpec->hSc->blockSignals(false);
+           _DisSpec->getWidget()->setHshift(p);
+           _ConSpec->getWidget()->setHshift(p);
+        }
     }
-    else if(event->pos().x() > _ConSpec->pos().x() && event->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
-    {
-      double p = event->pos().x()-_ConSpec->pos().x();
-      p = (float)p/_ConSpec->hSc->width() * 100 -50;
-      _DisSpec->hSc->blockSignals(true);
-      _ConSpec->hSc->blockSignals(true);
-      bindSpecScroll(p);
-      _DisSpec->hSc->blockSignals(false);
-      _ConSpec->hSc->blockSignals(false);
-      _DisSpec->getWidget()->setHshift(p);
-      _ConSpec->getWidget()->setHshift(p);
-    }
-  }
 }
 
 void MainWindow::enableNoiseSelect(bool i)
 {
-  _selectNoise->setEnabled(i);
-  if(i)
-  {
-    noiseAddfunc(_selectNoise->currentIndex());
-  }
-  if(!i)
-  {
-    for(int i =0; i < num; i++)
-        buf1[i] =_orgData[i];
-    utilities->updateUtilites(buf1,num);
-    _orgFileName=QDir::tempPath()+"/tmp.wav";
-    ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
-    _ConSpec->getWidget()->updateGL();
-     nonIntSr(sampleRateSelect->currentText());
-    _DisSpec->getWidget()->updateGL();
-    _OrgWave->getGlwidget()->updateGL();
-    _SampledWave->getGlwidget()->updateGL();
-  }
+    _selectNoise->setEnabled(i);
+    if(i)
+    {
+        noiseAddfunc(_selectNoise->currentIndex());
+    }
+    if(!i)
+    {
+        for(int i =0; i < num; i++)
+            buf1[i] =_orgData[i];
+        utilities->updateUtilites(buf1,num);
+        _orgFileName=QDir::tempPath()+"/tmp.wav";
+        ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
+        _ConSpec->getWidget()->updateGL();
+         nonIntSr(sampleRateSelect->currentText());
+      _DisSpec->getWidget()->updateGL();
+        _OrgWave->getGlwidget()->updateGL();
+        _SampledWave->getGlwidget()->updateGL();
+    }
+
 }
 
 void MainWindow::noiseAddfunc(int index)
 {
-  float freq = 0;
-  if(index == -1 || index == 0)
-  {
-     freq = 0.25*M_PI;
-  }
-  else if(index == 1)
-  {
-      freq = 0.5 *M_PI;
-  }
-  else if(index == 2)
-  {
-      freq = 0.75 * M_PI;
-  }
-  for(int i =0; i < num; i++)
-      buf1[i] =(_orgData[i] + (float)sin(freq*i)/5.0)/1.2;
-  utilities->updateUtilites(buf1,num);
-  _orgFileName=QDir::tempPath()+"/tmp.wav";
-  _sampleFileName = _orgFileName;
-  ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
-   nonIntSr(sampleRateSelect->currentText());
-  _ConSpec->getWidget()->updateGL();
+    float freq = 0;
+    if(index == -1 || index == 0)
+    {
+       freq = 0.25*M_PI;
+    }
+    else if(index == 1)
+    {
+        freq = 0.5 *M_PI;
+    }
+    else if(index == 2)
+    {
+        freq = 0.75 * M_PI;
+    }
+
+    for(int i =0; i < num; i++)
+        buf1[i] =(_orgData[i] + (float)sin(freq*i)/100.0)/1.2;
+    utilities->updateUtilites(buf1,num);
+    _orgFileName=QDir::tempPath()+"/tmp.wav";
+    _sampleFileName = _orgFileName;
+    ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
+     nonIntSr(sampleRateSelect->currentText());
+    _ConSpec->getWidget()->updateGL();
   _DisSpec->getWidget()->updateGL();
-  _OrgWave->getGlwidget()->updateGL();
-  _SampledWave->getGlwidget()->updateGL();
+    _OrgWave->getGlwidget()->updateGL();
+
+    _SampledWave->getGlwidget()->updateGL();
 }

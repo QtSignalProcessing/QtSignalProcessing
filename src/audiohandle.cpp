@@ -1,25 +1,27 @@
 #include "audiohandle.h"
-
-#include "fftw3.h"
-
+#include<iostream>
+#include"fftw3.h"
+#include"string.h"
 #include <cmath>
 
-#include <QDebug>
-
-AudioHandle::AudioHandle(const char* s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)
+#include<QDebug>
+using namespace std;
+AudioHandle::AudioHandle(const QString& s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)
 {
-  info.format = 0;
-  sf = sf_open(s,SFM_READ,&info); //(s.toSdtString().c_str())
-  if (sf == NULL)
-  {
-    qDebug() << "Failed to open the file.";
-    info.channels = 1;
-    info.frames = 20000;
-    info.samplerate = 11025;
-    info.format = 65541;
-    info.sections = 1;
-    info.seekable =1;
-  }
+    info.format = 0;
+
+   sf = sf_open(s.toStdString().c_str(),SFM_READ,&info); //(s.toSdtString().c_str())
+
+    if (sf == NULL)
+   {
+       cout<<"Failed to open the file. "<<sf_strerror(sf)<<" "<<sf_error(sf)<<endl;
+       info.channels = 1;
+       info.frames = 20000;
+       info.samplerate = 11025;
+       info.format = 65541;
+       info.sections = 1;
+       info.seekable =1;
+   }
 }
 
 AudioHandle::~AudioHandle()
@@ -59,7 +61,8 @@ void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
     SF_INFO      sfinfo ;
     sfinfo.channels=1;
     sfinfo.samplerate=sr;
-    sfinfo.format=SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+    sfinfo.format=info.format;
+    qDebug()<<info.format;
     if (! (outfile = sf_open (filename, SFM_WRITE,&sfinfo)))
     {   printf ("Not able to open output file %s.\n", filename) ;
         sf_perror (NULL) ;

@@ -1,11 +1,8 @@
 #include "utilities.h"
-
-#include "samplerate.h"
-
-#include <cstdlib>
-#include <cmath>
-#include <cstdio>
-
+#include<stdlib.h>
+#include<math.h>
+#include<iostream>
+using namespace std;
 Utilities::Utilities(float* data,int number):bits(0),L(1),down(1),data(data),qData(NULL),
     sampleData(NULL),filterData(NULL),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0)
 {
@@ -23,12 +20,12 @@ Utilities::~Utilities()
 
 float* Utilities::getQuantize()
 {
-    if(bits==0&&!(down>=2))
+    if((bits==0&&!(down>=2))||(bits == _trueBits))
     {
         SNR=0;
         return data;
     }
-    if((bits == 0) && (L>2))
+    if(((bits == 0) && (L>2)))
     {
         SNR= 0 ;
         return sampleData;
@@ -40,9 +37,9 @@ float* Utilities::getQuantize()
     float max = 1;
     if((down==1)&&(L==1))
     {
-        int num = std::pow(2.0,bits);
+        double num=pow(2,bits);
         float step=2*max/(float)num;
-        float* level = new float[num];
+        float* level = (float*)malloc(sizeof(float)*num);
         for(int i=0;i<num;i++)
           {
               level[i]=-max+step*(float)i;
@@ -57,13 +54,13 @@ float* Utilities::getQuantize()
                 index=0;
             qData[i]=level[0]+(float)index*step;
         }
-        delete[] level;
+        free(level);
         return qData;
     }
-    int num = std::pow(2.0,bits);
+    int num=pow(2,bits);
     float step= 2 * max / (float)num;
 
-    float* level = new float[num];
+    float level[num];
     for(int i=0;i<num;i++)
       {
           level[i]=  -max + step * (float)i;
@@ -88,7 +85,6 @@ float* Utilities::getQuantize()
             index=0;
         qData[i]=level[index];
     }
-    delete[] level;
     return qData;
 }
 
@@ -106,7 +102,9 @@ int Utilities::computeTrueBits()
             return i;
         }
     }
-    return 0;
+    _trueBits = i-1;
+    bits = i-1;
+    return i-1;
 }
 
 void Utilities::setBit(int bits)
@@ -188,7 +186,7 @@ float* Utilities::getSampleData(bool org)
 {
     if(sampleData!=NULL)
         free(sampleData);
-    sampleData=(float*)malloc(sizeof(float)*currentNumItems+1);
+    sampleData=(float*)malloc(sizeof(float)*currentNumItems);
     SRC_STATE	*src_state ;
     SRC_DATA	src_data ;
     int	error ;

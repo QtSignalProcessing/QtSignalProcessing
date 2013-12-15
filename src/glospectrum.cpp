@@ -1,12 +1,16 @@
 #include "glospectrum.h"
+#include <QtGui>
+#include <QtOpenGL>
+#include <QDebug>
+#include <QVector>
+#include <math.h>
 
-#include "axislabel.h"
-#include "iir.h"
-#include "chebyshevfilter.h"
-
-#include "fftw3.h"
-
-#include <cmath>
+#include<iostream>
+#include"iir.h"
+#include"fftw3.h"
+#include"cheby1.h"
+using namespace std;
+const double PI=3.14;
 
 GLOSpectrum::GLOSpectrum(float *buf,int num,bool discrete,int sr,QWidget *parent)
     : GLBase(buf,num,parent),
@@ -56,7 +60,7 @@ void GLOSpectrum::setVshift(int shift)
 {
     if(vIn!=1)
     {
-      int len=(yScales*vIn)*_max;
+      int len=(yScales*vIn)*max;
       this->vshift=(float)shift/100.0*(len-height);
     }
     updateGL();
@@ -165,7 +169,7 @@ void GLOSpectrum::Filter()
     }
     else
     {
-        ChebyshevFilter* d=new ChebyshevFilter(1,order,ripple,sr*1000,sr*1000*(factor)/2,0);
+        cheby1* d=new cheby1(1,order,ripple,sr*1000,sr*1000*(factor)/2,0);
         for(int i=0;i<=order;i++)
         {
             b1[i]=d->pp[i];
@@ -218,27 +222,27 @@ void GLOSpectrum::setToN()
 
 void GLOSpectrum::show2F(bool state)
 {
-  this->show2Spec=state;
-  if(show2Spec==false)
-  {
-    conFirst=false;
-    disFirst=false;
-    updateGL();
-  }
+    this->show2Spec=state;
+    if(show2Spec==false)
+    {
+        conFirst=false;
+        disFirst=false;
+        updateGL();
+    }
 }
 
 void GLOSpectrum::conDis()
 {
-  conFirst=true;
-  disFirst=false;
-  updateGL();
+    conFirst=true;
+    disFirst=false;
+    updateGL();
 }
 
 void GLOSpectrum::disCon()
 {
-  conFirst=false;
-  disFirst=true;
-  updateGL();
+    conFirst=false;
+    disFirst=true;
+    updateGL();
 }
 
 void GLOSpectrum::paintGL()
@@ -273,7 +277,7 @@ void GLOSpectrum::paintGL()
         glEnd();
     }
     xlabel->autoScale();
-    currentNumItems=number*(float)L/downSample;
+
     if(totalValue!=NULL)
     {
         free(totalValue);
@@ -294,9 +298,9 @@ void GLOSpectrum::paintGL()
     }
     if(currentNumItems == number)
     {
-        _max=getMax1(  amplitude,currentNumItems/2/downSample);
-        yScales =  (float)(height-height/9)/_max;
-        _currentYmax = _max;
+        max=getMax1(  amplitude,currentNumItems/2/downSample);
+        yScales =  (float)(height-height/9)/max;
+        _currentYmax = max;
     }
     glColor3f(1,0,0);
     glLineWidth(1);
@@ -311,7 +315,7 @@ void GLOSpectrum::paintGL()
         show=false;
         glBegin(GL_LINE_STRIP);
         xScaleW1=number/(width-xShiftW1);
-        yShiftW1=height/10;
+        yShiftW1=height/11;
          //the following 2 for loops plot the spectrum of the original signal
         for (int x = 0; x <=number/2; x++)
         {
@@ -366,7 +370,7 @@ void GLOSpectrum::paintGL()
     {
         glBegin(GL_LINE_STRIP);
         xScaleW1=number/(width-xShiftW1);
-        yShiftW1=height/10;
+        yShiftW1=height/11;
          //the following 2 for loops plot the spectrum of the original signal
         int x;
         ptDist = 0;
@@ -416,7 +420,7 @@ void GLOSpectrum::paintGL()
             }
         }
         glEnd();
-        previousIndex = 0;
+        previousIndex = -1;
         ptDist = 0;
         glBegin(GL_LINE_STRIP);
         for ( x =  currentNumItems/2; x >=0; x--)
@@ -594,9 +598,11 @@ void GLOSpectrum::paintGL()
        glVertex2f(xShiftW1, height);
        glEnd();
        numofP=number / currentNumItems;
-       if(numofP >= 3)
-           emit TooManyPeriods(true);
-       else emit TooManyPeriods(false);
+      // if(numofP >= 5)
+      // {
+          // emit TooManyPeriods(true);
+      // }
+      // else emit TooManyPeriods(false);
        if(hIn<=1&&(numofP<2))
            plotXAxis();
        else
@@ -782,6 +788,7 @@ double* GLOSpectrum::getAmplitude(int num,double *in)
             in1[i]=0;
             if(i<currentNumItems)
             in1[i]=plotData[i];
+
         }
         p=fftw_plan_dft_r2c_1d((currentNumItems),in1,out,FFTW_ESTIMATE);
         fftw_execute(p);
@@ -795,6 +802,8 @@ double* GLOSpectrum::getAmplitude(int num,double *in)
         imag=out[j][1];
         amplitude[j]=sqrt(real*real+imag*imag);
     }
+    if(downSample == 10)
+    qDebug()<<"I am here";
     free(orgIn);
     fftw_destroy_plan(p);
     fftw_free(out);
@@ -1064,39 +1073,6 @@ int GLOSpectrum::getIndex(float value)
     return index;
 }
 
-int GLOSpectrum::normalizeMax(float max)
-{
-    float cmax=max;
-    if(fabs(max)<=10&&fabs(max)>=1)
-    {
-        cmax=max;
-        return cmax;
-    }
-    else if(fabs(max)>10)
-    {
-        int n=0;
-        while(fabs(cmax)/10>10)
-        {
-            n++;
-            cmax/=10;
-        }
-        int plot=max/pow(10.0,n+1)+2;
-        return plot;
-    }
-    else
-    {
-        float cmax1=max;
-        int n=0;
-        while(cmax1<1)
-        {
-            cmax1*=10;
-            n++;
-        }
-        int plot=max*pow(10.0,n+1)+1;
-                return plot;
-    }
-}
-
 void GLOSpectrum::ygenerateAxis()
 {
     if(discrete)
@@ -1106,11 +1082,11 @@ void GLOSpectrum::ygenerateAxis()
         double S[]={1,2,5};
         uint i = 0;
         uint grid = 1;
-        int current = ceil(_max);
+        int current = ceil(max);
         while(!((int)(n*grid)>(current)))
         {
           ++i;
-          grid = pow(10.0,(int)i/3)*S[i%3];
+          grid = pow(10,i/3)*S[i%3];
         }
         int yGrid = grid;
         int numOfTicks = current*vIn/yGrid;
@@ -1122,7 +1098,7 @@ void GLOSpectrum::ygenerateAxis()
         if(ycord.size()!=0)
         ycord.clear();
         int step = current*vIn / numOfTicks;
-        float step2 =(float)_max/numOfTicks;
+        float step2 =(float)max/numOfTicks;
         for(int i=0;i<numOfTicks;i++)
         {
             yl.append(i*step2);
@@ -1155,11 +1131,11 @@ void GLOSpectrum::ygenerateAxis()
         double S[]={1,2,5};
         uint i = 0;
         uint grid = 1;
-        int current = ceil(_max);
+        int current = ceil(max);
         while(!((int)(n*grid)>(current)))
         {
           ++i;
-          grid = pow(10.0,(int)i/3)*S[i%3];
+          grid = pow(10,i/3)*S[i%3];
         }
         int yGrid = grid;
         int numOfTicks = current*vIn/yGrid;
@@ -1175,7 +1151,7 @@ void GLOSpectrum::ygenerateAxis()
            ycord.clear();
         }
         int step = current*vIn / numOfTicks;
-        float step2 =(float)_max/numOfTicks;
+        float step2 =(float)max/numOfTicks;
         for(int i=0;i<numOfTicks;i++)
         {
             yl.append(i*step2/sr);
@@ -1201,38 +1177,7 @@ void GLOSpectrum::ygenerateAxis()
     }
 }
 
-void GLOSpectrum::yPlotAxis(float yaxisFactor)
-{
-    int numOftick= normalizeMax(_max)/yaxisFactor;
-    yLabels=(float*)malloc(sizeof(float)*numOftick);
-    QFont f;
-    f.setPixelSize(10);
-    yCor=(float*)malloc(sizeof(float)*numOftick);
-    for(int i=0;i<numOftick;i++)
-    {
-        yLabels[i]=0;
-        yCor[i]=0;
-    }
-     glBegin(GL_LINES);
-     for(int i=0;i<numOftick;i++)
-     {
-         if(discrete)
-             yLabels[i]+=yaxisFactor*(i);
-         else
-             yLabels[i]+=yaxisFactor*(i);
-             yCor[i]=yLabels[i]*yScales*vIn*100+yShiftW1-vshift;
-             glVertex2f(xShiftW1,yCor[i]);
-             glVertex2f(xShiftW1-width/70,yCor[i]);
-      }
-     glEnd();
-     for(int i=0;i<numOftick;i++)
-     {
-         if(discrete)
-            renderText (2 ,yCor[i] , 0, QString::number( yLabels[i],'f',2),f);
-         else
-            renderText (2 ,yCor[i] , 0, QString::number( yLabels[i]*sr,'f',0),f);
-     }
-}
+
 
 void GLOSpectrum::setRipple(QString ripple)
 {
@@ -1298,7 +1243,7 @@ void GLOSpectrum::resetSpec(float *data, int number, int sr)
     this->data = data;
     this->number = number;
     this->sr = (float)sr/1000;
-    _max=0;
+    max=0;
     showRange=false;
     factor=1;
     NyqFreq=1;
@@ -1321,14 +1266,14 @@ void GLOSpectrum::resetSpec(float *data, int number, int sr)
 
 void GLOSpectrum::show1Period(bool i)
 {
-  showOnePeriod = i;
-  updateGL();
+    showOnePeriod = i;
+    updateGL();
 }
 
 void GLOSpectrum::setShowAliasing(bool i)
 {
-  this->showAliasing = i;
-  updateGL();
+    this->showAliasing = i;
+    updateGL();
 }
 
 void GLOSpectrum::setBanned(bool i)
