@@ -12,6 +12,7 @@ class QComboBox;
 class QCheckBox;
 class QLabel;
 
+
 class PlotWidget;
 class plotFilter;
 class AudioHandle;
@@ -24,24 +25,13 @@ class MainWindow : public QMainWindow
   public:
       MainWindow(QWidget *parent = 0);
       ~MainWindow();
-      PlotWidget* _SampledWave;
-      float *buf1;
-      plotFilter* _FilterWidget;
-      PlotWidget *_DisSpec;
-      PlotWidget *_OrgWave;
-      PlotWidget *_ConSpec;
-      QSpinBox *bitBox;
-      int currentNum;
-      int L;
-      int down;
-      float* sampleData;
-      float* qData;
-      void loadOrgwave();
-      void loadSample();
-      void loadCSpec();
-      void loadDSpec();
       void updateFilter();
       float getMax(float *a,int num);
+      QVector<float> pointer2Qvec(float* data,int size);
+
+signals:
+      void OrderTooHigh(bool);
+      void RippleNotValid(bool);
 
   public slots:
       void play();
@@ -49,58 +39,68 @@ class MainWindow : public QMainWindow
       void playfiltered();
       void open();
       void about();
+      void aboutDefaultSignal();
       void showFilter(bool i);
       void plot2Freq();
       void onlyCon();
       void onlyDis();
-      void nonIntSr(QString s);
+      void nonIntSr(int s);
       void applyFilters();
-      void resetW1();
-      void bindWaveScroll(int s);
-      void resetSp();
-      void bindSpecScroll(int s);
-      void vresetW1();
-      void vbindWaveScroll(int s);
-      void vresetSp();
-      void vbindSpecScroll(int s);
       void setBits(int bits);
-      void frozenScaling(bool i);
       void displayAliasing(bool i);
       void enableNoiseSelect(bool i);
       void noiseAddfunc(int index);
-      
-  protected:
-    void mouseMoveEvent(QMouseEvent * event);
-    void wheelEvent(QWheelEvent * event);
+      void butterOrCheby(int index);
+      void setOrder(QString order);
+      void setNyqFreq();
+      void setRipple(QString ripple);
+      void setFactor(QString s);
 
   private:
+      struct FilterPara
+      {
+          bool butter;
+          int order;
+          float* filterData;
+          float ripple;
+      };
+
+     struct SamplePara
+     {
+         int currentNum;
+         int upSampleFactor;
+         int downSampleFactor;
+         float* sampleData;
+     };
+
+      PlotWidget* _SampledWave;
+      float *_data;
+      plotFilter* _FilterWidget;
+      PlotWidget *_DisSpec;
+      PlotWidget *_OrgWave;
+      PlotWidget *_ConSpec;
+      QSpinBox *bitBox;
+      float* _quantizedData;
       int bits;
       void createActions();
       void createMenus();
       void filter();
       void loadFile(const QString &fileName);
       void createWidget(QWidget *main);
-      int f;
+      void setFilterDataToWidgets();
       int sr;
-      int c;
-      int num_items;
       float time;
       int num;
       int gcd(int v1,int v2);
-      bool discrete;
-      bool appFilter;
-      float ripple;
-      bool Butter;
-      float *filterData;
-      int order;
       void aafilter();
-      void getFilterdata();
+   //   void getFilterdata();
       void initializeVar();
       QMenu *fileMenu;
       QMenu *helpMenu;
       QAction *openAct;
       QAction *exitAct;
       QAction *aboutAct;
+      QAction *aboutDefaultSignalAct;
       QAction *aboutQtAct;
       AudioHandle *ria;
       QWidget *main;
@@ -113,7 +113,6 @@ class MainWindow : public QMainWindow
       void resetEverything();
       float* tmpData;
       bool ifShowAlias;
-      bool alreadyFiltered;
       int _trueBits;
       QCheckBox* _selFilter;
       QCheckBox* _showAliasing;
@@ -126,6 +125,9 @@ class MainWindow : public QMainWindow
       QString _orgFileName;
       QString _sampleFileName;
       QString _filteredFileName;
+      QVector<int> _samplingRates;
+      FilterPara _filterData;
+      SamplePara _sampleData;
 };
 
 #endif // MAINWINDOW_H

@@ -3,8 +3,8 @@
 
 #include <QWidget>
 
-class GLSW;
-class GLOSpectrum;
+class GLWidgetnew;
+class GLSpectrum;
 
 class QLabel;
 class QLineEdit;
@@ -14,25 +14,20 @@ class QToolButton;
 class plotFilter : public QWidget
 {
     Q_OBJECT
-
   public:
-    explicit plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent = 0);
-    GLOSpectrum* widget;
-    GLSW* _timeWidget;
-    GLOSpectrum* getWidget();
-    GLSW* getGLWidget();
-    QComboBox *filterSelect;
-    QLineEdit* ripple;
-    QLabel* rip;
-    QComboBox *cutFreqSel;
-    float NyqFreq;
+    plotFilter(float *ria,int num,bool discrete,int sr,QVector<float>& specdata,QWidget *parent = 0);
+    GLWidgetnew* getWaveWidget();
+    GLSpectrum* getSpecWidget();
+    QComboBox* getFilterSelect();
+    QLineEdit* getNumOfOrder();
+    QLineEdit* getRippleEdit();
+    QLabel* getOrderLabel();
+    QLabel* getRippleLabel();
+    QComboBox* getCutFreq();
+    QToolButton* getSetTonyqB();
+    QToolButton* getApplyButton();
     QStringList texts;
-    int sr;
-    QToolButton* apply;
-    QToolButton* reset;
     QToolButton* play;
-    QLineEdit* numOfOrder;
-
   signals:
     void closed(bool);
 
@@ -54,6 +49,19 @@ class plotFilter : public QWidget
     QLabel* cutOfF;
     void closeEvent(QCloseEvent *event);
     QLabel *_displayActualFreq;
+    GLWidgetnew* _wavewidget;
+    GLSpectrum* _specwidget;
+    QLabel* rip;
+    QComboBox *cutFreqSel;
+    float NyqFreq;
+
+    int sr;
+    QToolButton* apply;
+    QToolButton* reset;
+
+    QComboBox *filterSelect;
+    QLineEdit* numOfOrder;
+    QLineEdit* ripple;
 };
 
 #endif // PLOTFILTER_H

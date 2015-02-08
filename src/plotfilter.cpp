@@ -1,7 +1,7 @@
 #include "plotfilter.h"
 
-#include "glospectrum.h"
-#include "glsw.h"
+#include "glwidgetnew.h"
+#include "glspectrum.h"
 
 #include <QLabel>
 #include <QHBoxLayout>
@@ -9,8 +9,9 @@
 #include <QLineEdit>
 #include <QToolButton>
 #include <QCloseEvent>
+#include <QDebug>
 
-plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) :
+plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QVector<float>& specdata,QWidget *parent) :
     QWidget(parent)
 {
     this->sr=sr;
@@ -19,12 +20,17 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     font.setPointSize(10);
     name->setText("Anti-aliasing filter");
     name->setFont(font);
-    widget=new GLOSpectrum(ria,num,discrete,sr);
     float  time=(float)num/sr;
-    _timeWidget=new GLSW(ria,num,time,false);
+    QVector<float> datapt;
+    for( int i = 0; i < num; i++ )
+        datapt.push_back(ria[i]);
+
+    _wavewidget = new GLWidgetnew(datapt,time,false);
+    _wavewidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    _specwidget = new GLSpectrum(specdata, discrete,1.0,sr);
     QHBoxLayout* widgetLayout = new QHBoxLayout;
-    widgetLayout->addWidget(_timeWidget);
-    widgetLayout->addWidget(widget);
+    widgetLayout->addWidget(_wavewidget);
+    widgetLayout->addWidget(_specwidget);
     Fdes=new QLabel(this);
     font.cleanup();
     font.setBold(true);
@@ -37,13 +43,10 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     order->setText("Order");
     numOfOrder=new QLineEdit(this);
     numOfOrder->setText("2");
-    connect(filterSelect,SIGNAL(currentIndexChanged(int)),widget,SLOT(butterOrCheby(int)));
-    connect(numOfOrder,SIGNAL(textEdited(QString)),widget,SLOT(setOrder(QString)));
     ripple=new QLineEdit(this);
     ripple->setText("0.5");
     rip=new QLabel(this);
     rip->setText("Ripple:");
-    connect(ripple,SIGNAL(textEdited(QString)),widget,SLOT(setRipple(QString)));
     if((filterSelect->currentIndex()==-1)||(filterSelect->currentIndex()==0))
     {
         ripple->setVisible(false);
@@ -55,12 +58,10 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     OrderIsToHigh->setText("Order is too high!");
     OrderIsToHigh->setStyleSheet("QLabel {  color : red; }");
     OrderIsToHigh->setVisible(false);
-    connect(widget,SIGNAL(OrderTooHigh(bool)),OrderIsToHigh,SLOT(setVisible(bool)));
     RippleNotValid = new QLabel(this);
     RippleNotValid->setText("Ripple is not valid");
     RippleNotValid->setStyleSheet("QLabel {  color : red; }");
     RippleNotValid->setVisible(false);
-    connect(widget,SIGNAL(RippleNotValid(bool)),RippleNotValid,SLOT(setVisible(bool)));
     orderL->addWidget(order);
     orderL->addWidget(numOfOrder);
     orderL->addWidget(rip);
@@ -73,7 +74,7 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     cutOfF->setText("Cutoff frequency");
     cutFreqSel=new QComboBox(this);
     texts.clear();
-    if(sr==11025)
+   /* if(sr==11025)
     {
         texts<<QString::number(11025)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
                QString::number(2000)<<QString::number(1000)<<
@@ -86,13 +87,15 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
                QString::number(20000)<<QString::number(15000)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<QString::number(250)<<
                QString::number(200)<<QString::number(100);
-    }
+    }*/
+    texts<<QString::number(sr)<<QString::number(sr/2)<<QString::number(sr/3)<<
+            QString::number(sr/4)<<QString::number(sr/5)<<QString::number(sr/6)<<
+            QString::number(sr/7)<<QString::number(sr/8)<<QString::number(sr/9)<<
+            QString::number(sr/10)<<QString::number(sr/20);
     cutFreqSel->addItems(texts);
-    connect(cutFreqSel,SIGNAL(currentIndexChanged(QString)),widget,SLOT(setFactor(QString)));
     QHBoxLayout *activeFreqLayout = new QHBoxLayout;
     reset=new QToolButton(this);
     reset->setText("Set to Nyq. Freq.");
-    connect(reset,SIGNAL(clicked()),widget,SLOT(setToN()));
     QLabel *activeLabel = new QLabel("Actual cut off freq.:");
     _displayActualFreq = new QLabel(cutFreqSel->currentText());
     activeFreqLayout->addWidget(reset);
@@ -103,20 +106,17 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QWidget *parent) 
     play->setText("Play");
     apply=new QToolButton(this);
     apply->setText("Apply");
-    connect(apply,SIGNAL(clicked()),widget,SLOT(Filter()));
     connect(apply,SIGNAL(clicked()),this,SLOT(setActualFreq()));
     connect(reset,SIGNAL(clicked()),this,SLOT(setCutFreqToNy()));
     connect(reset,SIGNAL(clicked()),this,SLOT(setActualFreq()));
     QGridLayout *ConpLayout = new QGridLayout(this);
     ConpLayout->addWidget(name,0,0);
     ConpLayout->addLayout(widgetLayout,1,0);
-    //ConpLayout->addWidget(widget,1,0);
     ConpLayout->addWidget(Fdes,2,0);
     ConpLayout->addWidget(filterSelect,3,0);
     ConpLayout->addWidget(ooder,4,0);
     ConpLayout->addWidget(cutOfF,5,0);
     ConpLayout->addWidget(cutFreqSel,6,0);
-    //ConpLayout->addWidget(reset,7,0);
     ConpLayout->addLayout(activeFreqLayout,7,0);
     ConpLayout->addWidget(play,8,1);
     ConpLayout->addWidget(apply,8,0);
@@ -135,17 +135,6 @@ void plotFilter::filterChanged(int index)
         ripple->setVisible(true);
         rip->setVisible(true);
     }
-}
-
-
-GLOSpectrum* plotFilter::getWidget()
-{
-  return this->widget;
-}
-
-GLSW* plotFilter::getGLWidget()
-{
-  return _timeWidget;
 }
 
 void plotFilter::setComboText(QString string)
@@ -184,6 +173,54 @@ void plotFilter::closeEvent(QCloseEvent *event)
 void plotFilter::setActualFreq()
 {
   _displayActualFreq->setText(cutFreqSel->currentText());
-  _timeWidget->plotData = widget->filterData;
-  _timeWidget->updateGL();
+}
+
+GLWidgetnew* plotFilter::getWaveWidget()
+{
+    return _wavewidget;
+}
+
+QComboBox* plotFilter::getFilterSelect()
+{
+    return filterSelect;
+}
+
+QLineEdit* plotFilter::getNumOfOrder()
+{
+    return numOfOrder;
+}
+
+QLineEdit* plotFilter::getRippleEdit()
+{
+    return ripple;
+}
+
+QLabel* plotFilter::getOrderLabel()
+{
+    return OrderIsToHigh;
+}
+
+QLabel* plotFilter::getRippleLabel()
+{
+    return RippleNotValid;
+}
+
+QComboBox* plotFilter::getCutFreq()
+{
+    return cutFreqSel;
+}
+
+QToolButton* plotFilter::getSetTonyqB()
+{
+    return reset;
+}
+
+GLSpectrum* plotFilter::getSpecWidget()
+{
+    return _specwidget;
+}
+
+QToolButton* plotFilter::getApplyButton()
+{
+    return apply;
 }

@@ -13,7 +13,7 @@ QT_VERSION_MAJOR = $$member(QT_VERSION, 0)
 QT_VERSION_MINOR = $$member(QT_VERSION, 1)
 
 isEqual(QT_VERSION_MAJOR, 4): QT += gui phonon
-isEqual(QT_VERSION_MAJOR, 5): QT += widgets multimediawidgets
+isEqual(QT_VERSION_MAJOR, 5): QT += widgets multimediawidgets multimedia
 
 TARGET = SignalProcessing
 TEMPLATE = app
@@ -21,27 +21,28 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     plotwidget.cpp \
-    glospectrum.cpp \
     iir.cpp \
     plotfilter.cpp \
-    axislabel.cpp \
-    glsw.cpp \
     utilities.cpp \
     audiohandle.cpp \
-    glbase.cpp \
-    chebyshevfilter.cpp
+    chebyshevfilter.cpp \
+    glwidgetnew.cpp \
+    glspectrum.cpp \
+
+
+
 
 HEADERS  += mainwindow.h \
     plotwidget.h \
-    glospectrum.h \
     iir.h \
     plotfilter.h \
-    axislabel.h\
-    glsw.h \
     utilities.h \
     audiohandle.h \
-    glbase.h \
-    chebyshevfilter.h
+    chebyshevfilter.h \
+    glwidgetnew.h \
+    glspectrum.h \
+
+
 
 win32: INCLUDEPATH  += ../include
 

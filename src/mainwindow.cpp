@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 
-#include "plot.h"
+#include "plotwidget.h"
 #include "utilities.h"
 #include "audiohandle.h"
 #include "plotfilter.h"
+#include "glwidgetnew.h"
+#include "glspectrum.h"
 
 #include <QMouseEvent>
 #include <QComboBox>
@@ -11,9 +13,13 @@
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QMenu>
+#include <QLabel>
+#include <QToolButton>
 #include <QMessageBox>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QHBoxLayout>
+#include <QScrollBar>
 #include <QApplication>
 
 #if QT_VERSION < 0x050000
@@ -23,9 +29,9 @@
 #endif
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),buf1(NULL),sampleData(NULL),qData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
-      alreadyFiltered(false),_trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL),
-      _orgFileName(),_sampleFileName(),_filteredFileName()
+    : QMainWindow(parent),_data(NULL),_quantizedData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
+     _trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL),
+      _orgFileName(),_sampleFileName(),_filteredFileName(),_samplingRates(),_filterData(),_sampleData()
 {
     createActions();
     createMenus();
@@ -35,125 +41,83 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(main);
     createWidget(main);
     this->setWindowTitle("DSP Demo - University of Konstanz");
-    this->show();
 }
 
 void MainWindow::initializeVar()
 {
-    ripple=0.5;
-    Butter=true;
-    order=2;
-    appFilter=false;
-    L=1;
-    down=1;
-    f = ria->getFrameNum();
+    _filterData.ripple = 0.5;
+    _filterData.butter = true;
+    _filterData.order = 2;
+    _sampleData.upSampleFactor = 1;
+    _sampleData.downSampleFactor = 1;
+    int f = ria->getFrameNum();
     sr=ria->getSamplerate();
-    c=ria->getChannel();
-    num_items = f*c;
-    appFilter = false;
+    int c=ria->getChannel();
+    int num_items = f*c;
     time=(float)num_items/sr;
-    if(buf1!=NULL)
-        free(buf1);
-    buf1=ria->getData(num_items,num);
-    if(buf1)
+    qDebug()<<time;
+    if(_data!=NULL)
+        free(_data);
+    _data=ria->getData(num_items,num);
+    if(_data)
     {
-        currentNum=num;
+        _sampleData.currentNum = num;
         loadingFailed = false;
         if(_orgData!=NULL)
             free(_orgData);
         _orgData = (float*)malloc(num*sizeof(float));
-        for(int i =0; i < currentNum; i++)
-            _orgData[i] =buf1[i] ;
+        for(int i =0; i < num; i++)
+        {
+            _orgData[i] =_data[i] ;
+        }
     }
     else
     {
-
         num = 20000;
-        currentNum=num;
-        buf1 = (float*)malloc(sizeof(float)*num);
+        _sampleData.currentNum=num;
+        _data = (float*)malloc(sizeof(float)*num);
         sr = 11025;
         for(int i = 0; i< 20000;i++)
-            buf1[i] = (sin(i/1000.0)+sin(i))/2;
+            _data[i] = (sin(i*3.14/2));
         _orgData = (float*)malloc(num*sizeof(float));
-        for(int i =0; i < currentNum; i++)
-            _orgData[i] =buf1[i] ;
+        for(int i =0; i < num; i++)
+            _orgData[i] =_data[i] ;
         loadingFailed = true;
         _orgFileName=QDir::tempPath()+"/tmp.wav";
-        ria->writeToWave(buf1,_orgFileName.toLatin1().data(),sr,num);
+        ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
     }
 }
 
 void MainWindow::createWidget(QWidget *main)
 {
      initializeVar();
-    //create the widget Plot Sampled waveform
-    utilities=new Utilities(buf1,num);
-    _SampledWave=new plot(buf1,num,time,true,main);
-    //create the widget to plot the oroginal waveform
-    _OrgWave=new plot(buf1,num,time,false,main);
-    discrete=false;
-    //create the widget for the continuous-time spectrum
-    _ConSpec=new plot(buf1,num,discrete,sr,main);
-    //discrete-time spectrum
-    _DisSpec=new plot(buf1,num,true,sr,main);
+    utilities=new Utilities(_data,num);
+    _SampledWave=new PlotWidget(_data,num,time,true,main);
+    _OrgWave=new PlotWidget(_data,num,time,false,main);
+    QVector<float> spec = utilities->getAmplitude();
+    _ConSpec=new PlotWidget(spec,false,sr,main);
+    _DisSpec=new PlotWidget(spec,true,sr,main);
     _OrgWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _ConSpec->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _SampledWave->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     _DisSpec->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
-    connect(_OrgWave->hReset,SIGNAL(clicked()),this,SLOT(resetW1()));
-    connect(_SampledWave->hReset,SIGNAL(clicked()),this,SLOT(resetW1()));
-    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),this,SLOT(bindWaveScroll(int)));
-    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),this,SLOT(bindWaveScroll(int)));
-    connect(_ConSpec->hReset,SIGNAL(clicked()),this,SLOT(resetSp()));
-    connect(_DisSpec->hReset,SIGNAL(clicked()),this,SLOT(resetSp()));
-    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),this,SLOT(bindSpecScroll(int)));
-    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),this,SLOT(bindSpecScroll(int)));
-    connect(_OrgWave->vReset,SIGNAL(clicked()),this,SLOT(vresetW1()));
-    connect(_SampledWave->vReset,SIGNAL(clicked()),this,SLOT(vresetW1()));
-    connect(_OrgWave->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindWaveScroll(int)));
-    connect(_SampledWave->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindWaveScroll(int)));
-    connect(_ConSpec->vReset,SIGNAL(clicked()),this,SLOT(vresetSp()));
-    connect(_DisSpec->vReset,SIGNAL(clicked()),this,SLOT(vresetSp()));
-    connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
-    connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),this,SLOT(vbindSpecScroll(int)));
-    connect(_SampledWave->hSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(intToDouble(int)));
-    connect(_OrgWave->hSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(intToDouble(int)));
-    connect(_SampledWave->vSc,SIGNAL(valueChanged(int)),_OrgWave->getGlwidget(),SLOT(setVshift(int)));
-    connect(_OrgWave->vSc,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setVshift(int)));
-    connect(_OrgWave->vReset,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(resetV()));
-    connect(_SampledWave->vReset,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(resetV()));
-    connect(_OrgWave->hReset,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(resetH()));
-    connect(_SampledWave->hReset,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(resetH()));
-    connect(_OrgWave->vPlus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(vIncrease()));
-    connect(_SampledWave->vPlus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(vIncrease()));
-    connect(_OrgWave->vMinus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(vDecrease()));
-    connect(_SampledWave->vMinus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(vDecrease()));
-    connect(_OrgWave->hPlus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(hIncrease()));
-    connect(_SampledWave->hPlus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hIncrease()));
-    connect(_OrgWave->hMinus,SIGNAL(clicked()),_SampledWave->getGlwidget(),SLOT(hDecrease()));
-    connect(_SampledWave->hMinus,SIGNAL(clicked()),_OrgWave->getGlwidget(),SLOT(hDecrease()));
-    connect(_ConSpec->hSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(intToDouble(int)));
-    connect(_DisSpec->hSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(intToDouble(int)));
-    connect(_ConSpec->vSc,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setVshift(int)));
-    connect(_DisSpec->vSc,SIGNAL(valueChanged(int)),_ConSpec->getWidget(),SLOT(setVshift(int)));
-    connect(_ConSpec->vPlus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(vIncrease()));
-    connect(_DisSpec->vPlus,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(vIncrease()));
-    connect(_ConSpec->vMinus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(vDecrease()));
-    connect(_DisSpec->vMinus,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(vDecrease()));
-    connect(_ConSpec->hPlus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(hIncrease()));
-    connect(_DisSpec->hPlus,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(hIncrease()));
-    connect(_ConSpec->hMinus,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(hDecrease()));
-    connect(_DisSpec->hMinus,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(hDecrease()));
-    connect(_ConSpec->vReset,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(resetV()));
-    connect(_DisSpec->vReset,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(resetV()));
-    connect(_ConSpec->hReset,SIGNAL(clicked()),_DisSpec->getWidget(),SLOT(resetH()));
-    connect(_DisSpec->hReset,SIGNAL(clicked()),_ConSpec->getWidget(),SLOT(resetH()));
+    connect(_OrgWave->getWaveWidget(),SIGNAL(xAxisScaled(double)),_SampledWave->getWaveWidget(),SLOT(setLinkedScale(double)));
+    connect(_SampledWave->getWaveWidget(),SIGNAL(xAxisScaled(double)),_OrgWave->getWaveWidget(),SLOT(setLinkedScale(double)));
+    connect(_OrgWave->getWaveWidget(),SIGNAL(xAxisShifted(double)),_SampledWave->getWaveWidget(),SLOT(setLinkedShift(double)));
+    connect(_SampledWave->getWaveWidget(),SIGNAL(xAxisShifted(double)),_OrgWave->getWaveWidget(),SLOT(setLinkedShift(double)));
+    connect(_ConSpec->getSpecWidget(),SIGNAL(xAxisScaled(double)),_DisSpec->getSpecWidget(),SLOT(setLinkedScale(double)));
+    connect(_DisSpec->getSpecWidget(),SIGNAL(xAxisScaled(double)),_ConSpec->getSpecWidget(),SLOT(setLinkedScale(double)));
+    connect(_ConSpec->getSpecWidget(),SIGNAL(xAxisShifted(double)),_DisSpec->getSpecWidget(),SLOT(setLinkedShift(double)));
+    connect(_DisSpec->getSpecWidget(),SIGNAL(xAxisShifted(double)),_ConSpec->getSpecWidget(),SLOT(setLinkedShift(double)));
+    connect(_OrgWave->hReset,SIGNAL(clicked()),_SampledWave->getWaveWidget(),SLOT(resetH()));
+    connect(_SampledWave->hReset,SIGNAL(clicked()),_OrgWave->getWaveWidget(),SLOT(resetH()));
+    connect(_SampledWave->hReset,SIGNAL(clicked()),_SampledWave->getWaveWidget(),SLOT(resetH()));
+    connect(_OrgWave->hReset,SIGNAL(clicked()),_OrgWave->getWaveWidget(),SLOT(resetH()));
     QGridLayout *ConpLayout = new QGridLayout(main);
     ConpLayout->addWidget(_OrgWave,0,0);
     ConpLayout->addWidget(_ConSpec,0,2);
     ConpLayout->addWidget(_SampledWave,2,0);
     ConpLayout->addWidget(_DisSpec,2,2);
-   // connect(_DisSpec->getWidget(),SIGNAL(TooManyPeriods(bool)),this,SLOT(frozenScaling(bool)));
     QToolButton *playB=new QToolButton(main);
     playB->setText("play");
     playB->connect(playB,SIGNAL(clicked()),this,SLOT(play()));
@@ -162,7 +126,7 @@ void MainWindow::createWidget(QWidget *main)
     play1->setText("play");
     play1->connect(play1,SIGNAL(clicked()),this,SLOT(playSample()));
     QCheckBox* stickOn = new QCheckBox("Stick on",this);
-    connect(stickOn,SIGNAL(toggled(bool)),_SampledWave->getGlwidget(),SLOT(setStickOn(bool)));
+    connect(stickOn,SIGNAL(toggled(bool)),_SampledWave->getWaveWidget(),SLOT(setStickOn(bool)));
     QHBoxLayout* bottomLeft = new QHBoxLayout;
     bottomLeft->addWidget(play1);
     bottomLeft->addWidget(stickOn);
@@ -172,7 +136,7 @@ void MainWindow::createWidget(QWidget *main)
     //quantization
     if(loadingFailed)
     {
-        _trueBits = 8;
+        _trueBits = 16;
     }
     else
     {
@@ -181,12 +145,9 @@ void MainWindow::createWidget(QWidget *main)
     bitBox=new QSpinBox(main);
     bitBox->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
     bitBox->setValue(_trueBits);
-    bitBox->setMaximum(16);
+    bitBox->setMaximum(_trueBits);
     bitBox->setMinimum(1);
-    //connect to glsw for plotting the quantized waveform and glospectrum for computing the FFT and plotting
     connect(bitBox,SIGNAL(valueChanged(int)),this,SLOT(setBits(int)));
-    connect(bitBox,SIGNAL(valueChanged(int)),_SampledWave->getGlwidget(),SLOT(setBits(int)));
-    connect(bitBox,SIGNAL(valueChanged(int)),_DisSpec->getWidget(),SLOT(setBits(int)));
     QLabel* quan=new QLabel("Quantization",this);
     QFont font;
     font.setBold(true);
@@ -198,22 +159,36 @@ void MainWindow::createWidget(QWidget *main)
     QStringList texts;
     if(sr==11025)
     {
+        /*
     texts<<QString::number(sr)<<QString::number(10000)<<QString::number(5000)<<
            QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-           QString::number(200)<<QString::number(100);
+           QString::number(200)<<QString::number(100);*/
+        texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+                QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+                QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+                QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";
     }
     if(sr == 44100)
     {
-        texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
+        /*texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
                QString::number(20000)<<QString::number(10000)<<QString::number(5000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100)<<QString::number(18000);
+               QString::number(200)<<QString::number(100)<<QString::number(18000);*/
+        texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+                QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+                QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+                QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";
     }
+    for(int i=1;i<=10;i++)
+    {
+        int k = sr/i;
+        _samplingRates.append(k);
+    }
+    int k = sr/20;
+    _samplingRates.append(k);
     sampleRateSelect->addItems(texts);
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),this,SLOT(nonIntSr(QString)));
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_SampledWave->getGlwidget(),SLOT(nonIntSr(QString)));
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_DisSpec->getWidget(),SLOT(nonIntSr(QString)));
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_ConSpec->getWidget(),SLOT(setFactor(QString)));
+    connect(sampleRateSelect,SIGNAL(currentIndexChanged(int)),this,SLOT(nonIntSr(int)));
+
     QHBoxLayout* h2=new QHBoxLayout;
     QLabel* showSNR=new QLabel("SNR",this);
     SNR=new QLabel(this);
@@ -225,16 +200,16 @@ void MainWindow::createWidget(QWidget *main)
     QVBoxLayout* h1=new QVBoxLayout;
     _showSampleRange=new QCheckBox("Show max. Nyquist freq.",main);
     _showOnePeriod = new QCheckBox("Show only one period",main);
-    connect(_showOnePeriod,SIGNAL(clicked(bool)),_DisSpec->getWidget(),SLOT(show1Period(bool)));
-    connect(_showSampleRange,SIGNAL(stateChanged(int)),_ConSpec->getWidget(),SLOT(showSampleRange(int)));
-    connect(_showSampleRange,SIGNAL(stateChanged(int)),_DisSpec->getWidget(),SLOT(showSampleRange(int)));
+    connect(_showOnePeriod,SIGNAL(clicked(bool)),_DisSpec->getSpecWidget(),SLOT(show1Period(bool)));
+    connect(_showSampleRange,SIGNAL(stateChanged(int)),_ConSpec->getSpecWidget(),SLOT(showSampleRange(int)));
+    connect(_showSampleRange,SIGNAL(stateChanged(int)),_DisSpec->getSpecWidget(),SLOT(showSampleRange(int)));
     h1->addWidget(_showSampleRange);
     h1->addWidget(_showOnePeriod);
     QWidget* samplerange=new QWidget(main);
     samplerange->setLayout(h1);
     QGridLayout* v1=new QGridLayout;
     QLabel* filterLabel=new QLabel("Apply anti-aliasing filter",this);
-    _addNoise = new QCheckBox("Add sin noise to signal",this);
+    _addNoise = new QCheckBox("Add sinus wave to signal",this);
     connect(_addNoise,SIGNAL(toggled(bool)),this,SLOT(enableNoiseSelect(bool)));
     _selectNoise = new QComboBox(this);
     _selectNoise->setEnabled(false);
@@ -273,15 +248,15 @@ void MainWindow::createWidget(QWidget *main)
     vLayout->addWidget(snr);
     show2Spec=new QCheckBox("Show 2 freq.");
     connect(show2Spec,SIGNAL(clicked()),this,SLOT(plot2Freq()));
-    connect(show2Spec,SIGNAL(clicked(bool)),_DisSpec->getWidget(),SLOT(show2F(bool)));
+    connect(show2Spec,SIGNAL(clicked(bool)),_DisSpec->getSpecWidget(),SLOT(show2F(bool)));
     conFirst=new QCheckBox("Cont. first",main);
     disFirst=new QCheckBox("Discrete first",main);
     conFirst->setDisabled(true);
     disFirst->setDisabled(true);
     connect(conFirst,SIGNAL(clicked()),this,SLOT(onlyCon()));
-    connect(conFirst,SIGNAL(clicked(bool)),_DisSpec->getWidget(),SLOT(conDis()));
+    connect(conFirst,SIGNAL(toggled(bool)),_DisSpec->getSpecWidget(),SLOT(conDis(bool)));
     connect(disFirst,SIGNAL(clicked()),this,SLOT(onlyDis()));
-    connect(disFirst,SIGNAL(clicked(bool)),_DisSpec->getWidget(),SLOT(disCon()));
+    connect(disFirst,SIGNAL(toggled(bool)),_DisSpec->getSpecWidget(),SLOT(disCon(bool)));
     QHBoxLayout* h4=new QHBoxLayout;
     h4->addWidget(conFirst);
     h4->addWidget(disFirst);
@@ -289,25 +264,24 @@ void MainWindow::createWidget(QWidget *main)
     _show2Spec->setLayout(h4);
     vLayout->addWidget(show2Spec);
     vLayout->addWidget(_show2Spec);
-    connect(_SampledWave->getGlwidget(),SIGNAL(newSNR(double)),SNR,SLOT(setNum(double)));
+    connect(_SampledWave->getWaveWidget(),SIGNAL(newSNR(double)),SNR,SLOT(setNum(double)));
     rightWidget->setLayout(vLayout);
     ConpLayout->addWidget(rightWidget,2,3);
-    _FilterWidget=new plotFilter(buf1,num,false,sr,0);
+    _FilterWidget=new plotFilter(_data,num,false,sr,spec,0);
     _FilterWidget->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget->getWidget(),SLOT(setNyqFreq(QString)));
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget->getWidget(),SLOT(setFactor(QString)));
-    connect(_FilterWidget->apply,SIGNAL(clicked()),this,SLOT(applyFilters()));
-    connect(_FilterWidget->reset,SIGNAL(clicked()),this,SLOT(applyFilters()));
     connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString)));
+    _FilterWidget->hide();
     connect(_FilterWidget->play,SIGNAL(clicked()),this,SLOT(playfiltered()));
     connect(_FilterWidget,SIGNAL(closed(bool)),this,SLOT(showFilter(bool)));
+    connect(_FilterWidget->getFilterSelect(),SIGNAL(currentIndexChanged(int)),this,SLOT(butterOrCheby(int)));
+    connect(_FilterWidget->getNumOfOrder(),SIGNAL(textEdited(QString)),this,SLOT(setOrder(QString)));
+    connect(_FilterWidget->getRippleEdit(),SIGNAL(textEdited(QString)),this,SLOT(setRipple(QString)));
+    connect(_FilterWidget->getSetTonyqB(),SIGNAL(clicked()),this,SLOT(setNyqFreq()));
+    connect(_FilterWidget->getApplyButton(),SIGNAL(clicked()),this,SLOT(applyFilters()));
+    connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString)));
 }
 
-
-MainWindow::~MainWindow()
-{
-
-}
+MainWindow::~MainWindow(){}
 
 void MainWindow::play()
 {
@@ -325,12 +299,10 @@ void MainWindow::playSample(){
   Phonon::MediaObject* player;
   if (_sampleFileName == NULL)
   {
-      qDebug()<<" _sampleFileName=NULL";
     player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
   }
   else
   {
-      qDebug()<<" _sampleFileName!=NULL"<<_sampleFileName;
     player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_sampleFileName));
   }
 #else
@@ -376,6 +348,12 @@ void MainWindow::about()
                "toolbars, and a status bar."));
 }
 
+void MainWindow::aboutDefaultSignal()
+{
+    QMessageBox::about(this, tr("About Application"),
+                       tr("The default signal is sin(0.1*n),the sampling rate(11025 Hz) is normalized to 2PI, so the frequency 0.1 in rad/s is 11025/2PI*0.1=176 Hz"));
+}
+
 void MainWindow::createActions()
 {
     openAct = new QAction(tr("&Open..."), this);
@@ -386,6 +364,8 @@ void MainWindow::createActions()
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
+    aboutDefaultSignalAct =new QAction(tr("&About Default Signal"), this);
+    connect(aboutDefaultSignalAct,SIGNAL(triggered()), this, SLOT(aboutDefaultSignal()));
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
@@ -401,6 +381,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(exitAct);
     menuBar()->addSeparator();
     helpMenu = menuBar()->addMenu(tr("&Help"));
+    helpMenu->addAction(aboutDefaultSignalAct);
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
 }
@@ -408,7 +389,6 @@ void MainWindow::createMenus()
 //load in the selected audio file(need to add the filtering of the file types)
 void MainWindow::loadFile(const QString &fileName)
 {
-
     if(ria!=NULL)
         delete ria;
     ria = new AudioHandle(fileName);
@@ -417,35 +397,85 @@ void MainWindow::loadFile(const QString &fileName)
     QStringList texts;
    if(sr==11025)
     {
-        texts<<QString::number(sr)<<QString::number(10000)<<QString::number(5000)<<
+       /* texts<<QString::number(sr)<<QString::number(10000)<<QString::number(5000)<<QString::number(4800)<<QString::number(4500)<<QString::number(sr/3)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100)<<QString::number(sr/3)<<QString::number(4500)<<QString::number(4800);
+               QString::number(200)<<QString::number(100);*/
+       texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+              QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+              QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+              QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";
     }
     else if(sr == 44100)
     {
-        texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
-               QString::number(20000)<<QString::number(10000)<<QString::number(5000)<<
+       /* texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<QString::number(sr/2)<<
+               QString::number(20000)<<QString::number(18000)<<QString::number(15000)<<QString::number(10000)<<QString::number(8000)<<QString::number(6000)<<QString::number(5000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<
-               QString::number(200)<<QString::number(100)<<QString::number(sr/2)<<QString::number(15000)<<QString::number(18000)<<QString::number(8000);
+               QString::number(200)<<QString::number(100);*/
+       texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+              QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+              QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+              QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";
     }
-   updateFilter();
+   _samplingRates.clear();
+   for(int i=1;i<=10;i++)
+   {
+       int k = sr/i;
+       _samplingRates.append(k);
+   }
+   int k = sr/20;
+   _samplingRates.append(k);
    sampleRateSelect->blockSignals(true);
    sampleRateSelect->clear();
    sampleRateSelect->addItems(texts);
    sampleRateSelect->blockSignals(false);
-   loadOrgwave();
-   loadSample();
-   loadCSpec();
-   loadDSpec();
-   utilities->updateUtilites(buf1,num);
+   QVector<float> dpt = pointer2Qvec(_data,num);
+   _OrgWave->getWaveWidget()->setTime(time);
+  _OrgWave->getWaveWidget()->setData(dpt);
+  _OrgWave->getWaveWidget()->updateMax();
+  _OrgWave->getWaveWidget()->resetH();
+
+  _SampledWave->getWaveWidget()->setTime(time);
+  _SampledWave->getWaveWidget()->setData(dpt);
+  _SampledWave->getWaveWidget()->updateMax();
+  _SampledWave->getWaveWidget()->setOffset(1);
+  _SampledWave->getWaveWidget()->resetH();
+
+  QVector<float> tmps = utilities->getAmplitude(dpt);
+  _ConSpec->getSpecWidget()->setData(tmps);
+  _ConSpec->getSpecWidget()->updateMax();
+  _ConSpec->getSpecWidget()->setRatio(1.0);
+  _ConSpec->getSpecWidget()->updateSampleRate(sr);
+  _ConSpec->getSpecWidget()->showSampleRange(0);
+  _ConSpec->getSpecWidget()->resetH();
+
+  _DisSpec->getSpecWidget()->setData(tmps);
+  _DisSpec->getSpecWidget()->updateMax();
+  _DisSpec->getSpecWidget()->setRatio(1.0);
+  _DisSpec->getSpecWidget()->updateSampleRate(sr);
+  _DisSpec->getSpecWidget()->showAliasing(false);
+  _DisSpec->getSpecWidget()->showSampleRange(0);
+  _DisSpec->getSpecWidget()->show1Period(false);
+  _DisSpec->getSpecWidget()->show2F(false);
+  _DisSpec->getSpecWidget()->resetH();
+
+  _FilterWidget->getWaveWidget()->setData(dpt);
+  _FilterWidget->getWaveWidget()->updateMax();
+  _FilterWidget->getWaveWidget()->resetH();
+  _FilterWidget->getSpecWidget()->setData(tmps);
+  _FilterWidget->getSpecWidget()->updateMax();
+  _FilterWidget->getSpecWidget()->setRatio(1.0);
+  _FilterWidget->getSpecWidget()->updateSampleRate(sr);
+   updateFilter();
+   utilities->updateUtilites(_data,num);
    if(loadingFailed)
    {
-       _trueBits = 8;
+       _trueBits = 16;
    }
    else
    {
     _trueBits = utilities->computeTrueBits();
    }
+   bitBox->setMaximum(_trueBits);
    bitBox->setValue(_trueBits);
    showFilter(false);
    resetEverything();
@@ -464,59 +494,9 @@ void MainWindow::loadFile(const QString &fileName)
    _selectNoise->addItems(texts);
    _selectNoise->blockSignals(false);
 }
-void MainWindow::loadOrgwave()
-{
-    _OrgWave->getGlwidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
-    _OrgWave->getGlwidget()->updateLabel(time,0);
-    _OrgWave->getGlwidget()->updateYLabel(10,-10);
-    _OrgWave->getGlwidget()->vIncrease();
-    _OrgWave->getGlwidget()->vDecrease();
-    _OrgWave->getGlwidget()->resetCommon();
-    _OrgWave->getGlwidget()->resetV();
-    _OrgWave->getGlwidget()->resetH();
-}
-
-void MainWindow::loadSample()
-{
-     _SampledWave->getGlwidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
-    _SampledWave->getGlwidget()->setSampleFactors(0,0);
-    _SampledWave->getGlwidget()->sampleOrNot=true;
-    _SampledWave->getGlwidget()->updateLabel(time,0);
-    _SampledWave->getGlwidget()->updateYLabel(10,-10);
-    _SampledWave->getGlwidget()->vIncrease();
-    _SampledWave->getGlwidget()->vDecrease();
-
-    _SampledWave->getGlwidget()->resetCommon();
-    _SampledWave->getGlwidget()->resetV();
-    _SampledWave->getGlwidget()->resetH();
-}
-
-
-void MainWindow::loadCSpec()
-{
-    _ConSpec->getWidget()->resetCommon();
-    _ConSpec->getWidget()->discrete = false;
-    _ConSpec->getWidget()->resetSpec(buf1,num,sr);
-    _ConSpec->getWidget()->resetV();
-    _ConSpec->getWidget()->resetH();
-}
-
-void MainWindow::loadDSpec()
-{
-    _DisSpec->getWidget()->resetCommon();
-    _DisSpec->getWidget()->discrete = true;
-    _DisSpec->getWidget()->resetSpec(buf1,num,sr);
-    _DisSpec->getWidget()->resetV();
-    _DisSpec->getWidget()->resetH();
-}
 
 void MainWindow::updateFilter()
 {
-    _FilterWidget->getWidget()->resetCommon();
-    _FilterWidget->getWidget()->resetSpec(buf1,num,sr);
-    _FilterWidget->getGLWidget()->resetCommon();
-     _FilterWidget->getGLWidget()->resetDataAndOther(buf1,num,time,getMax(buf1,num));
-     _FilterWidget->getGLWidget()->updateLabel(time,0);
     QStringList texts;
     if(sr==11025)
     {
@@ -524,24 +504,29 @@ void MainWindow::updateFilter()
                QString::number(2000)<<QString::number(1000)<<
                QString::number(500)<<QString::number(250)<<
                QString::number(200)<<QString::number(100);
+       /* texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+                QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+                QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+                QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";*/
     }
     if(sr == 44100)
     {
         texts<<QString::number(sr)<<QString::number(40000)<<QString::number(30000)<<
-               QString::number(20000)<<QString::number(15000)<<QString::number(10000)<<QString::number(5000)<<QString::number(2500)<<
+               QString::number(20000)<<QString::number(15000)<<QString::number(11025)<<QString::number(10000)<<QString::number(9000)
+             <<QString::number(7500)<<QString::number(5000)<<QString::number(2500)<<QString::number(3000)<<
                QString::number(2000)<<QString::number(1000)<<QString::number(500)<<QString::number(250)<<
-               QString::number(200)<<QString::number(100)<<QString::number(sr/2)<<QString::number(18000);
+               QString::number(200)<<QString::number(100);
+      /*  texts<<QString::number(sr)+" Max Sampling rate"<<QString::number(sr/2)+" 1/2 of max Sampling rate"<<QString::number(sr/3)+" 1/3 of max Sampling rate"<<
+                QString::number(sr/4)+" 1/4 of max Sampling rate"<<QString::number(sr/5)+" 1/5 of max Sampling rate"<<QString::number(sr/6)+" 1/6 of max Sampling rate"<<
+                QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
+                QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";*/
     }
     _FilterWidget->texts.clear();
     _FilterWidget->texts = texts;
-    _FilterWidget->cutFreqSel->clear();
-    _FilterWidget->numOfOrder->setText("2");
-    _FilterWidget->cutFreqSel->addItems(_FilterWidget->texts);
-    _FilterWidget->getWidget()->Filter();
-    _FilterWidget->setActualFreq();
-    _FilterWidget->getWidget()->updateGL();
+    _FilterWidget->getCutFreq()->clear();
+    _FilterWidget->getNumOfOrder()->setText("2");
+    _FilterWidget->getCutFreq()->addItems(_FilterWidget->texts);
 }
-
 
 float MainWindow::getMax(float *a,int num)
 {
@@ -558,7 +543,11 @@ void MainWindow::plot2Freq()
     {
         conFirst->setDisabled(false);
         disFirst->setDisabled(false);
-        _DisSpec->getWidget()->conDis();
+        conFirst->setChecked(true);
+        QVector<float> tmpw = pointer2Qvec(_data,num);
+        QVector<float> tmps = utilities->getAmplitude(tmpw);
+        _DisSpec->getSpecWidget()->setDataFor2Freq(tmps);
+        _DisSpec->getSpecWidget()->conDis(true);
         onlyCon();
     }
     if(!show2Spec->isChecked())
@@ -581,55 +570,37 @@ void MainWindow::onlyDis()
     conFirst->setChecked(false);
 }
 
-
 void MainWindow::showFilter(bool i)
 {
     if(i)
     {
-        alreadyFiltered = true;
-        appFilter=true;
-        _FilterWidget->getWidget()->showFilter=true;
-        _FilterWidget->getWidget()->Filter();
-        _FilterWidget->show();
-        getFilterdata();
-        _FilterWidget->getGLWidget()->plotData = filterData;
-
-        utilities->setFilterData(filterData);
-        sampleData = utilities->getSampleData(false);
-        _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
-        // void writeToWave(float* data,char* filename,float sr,int size);
-        _SampledWave->getGlwidget()->plotData=sampleData;
-        _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-        _SampledWave->getGlwidget()->updateGL();
-        _DisSpec->getWidget()->plotData=sampleData;
-        _DisSpec->getWidget()->setL(L,currentNum,down,true);
-        _DisSpec->getWidget()->updateGL();
-      //  sampleRateSelect->setEnabled(!i);
+        setFilterDataToWidgets();
         _selFilter->setChecked(true);
     }
     else
     {
         _FilterWidget->hide();
-        appFilter=false;
-        _FilterWidget->getGLWidget()->plotData = buf1;
-        if(L==1 && down ==1)
+        QVector<float> tmp = pointer2Qvec(_data,num);
+        _FilterWidget->getWaveWidget()->setData(tmp);
+        if(_sampleData.upSampleFactor==1 && _sampleData.downSampleFactor ==1)
         {
-            sampleData = buf1;
+            _sampleData.sampleData = _data;
         }
         else
         {
-            sampleData = utilities->getSampleData(true);
+            _sampleData.sampleData = utilities->getSampleData(true);
         }
-         _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
-          _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-        ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-        _SampledWave->getGlwidget()->plotData=sampleData;
-        _SampledWave->getGlwidget()->updateGL();
-        _DisSpec->getWidget()->plotData=sampleData;
-        _DisSpec->getWidget()->setL(L,currentNum,down,false);
-        _DisSpec->getWidget()->updateGL();
-      //  sampleRateSelect->setEnabled(!i);
+        _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+        ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
+
+        QVector<float> dpt;
+        float* tmpd = _sampleData.sampleData;
+        for( int i = 0; i < _sampleData.currentNum; i++ )
+            dpt.push_back(tmpd[i]);
+        _SampledWave->getWaveWidget()->setData(tmp);
+        QVector<float> tmps = utilities->getAmplitude(dpt);
+        _DisSpec->getSpecWidget()->setData(tmps);
+        _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
         _selFilter->setChecked(false);
     }
 }
@@ -645,44 +616,47 @@ int MainWindow::gcd(int v1,int v2)
     return v1;
 }
 
-void MainWindow::nonIntSr(QString s)
+void MainWindow::nonIntSr(int s)
 {
-    int nums=s.toInt();
-    if(nums==0||nums==-1||nums==sr)
+    if(s<0)
+        s=0;
+    int nums=_samplingRates[s];
+    if(nums==sr)
     {
-        L=1;
-        down=1;
+        _sampleData.upSampleFactor=1;
+        _sampleData.downSampleFactor=1;
     }
     else
     {
         int Gcd=gcd(nums,sr);
-        L=nums/Gcd;
-        down=sr/Gcd;
-
+        _sampleData.upSampleFactor= nums/Gcd;
+        _sampleData.downSampleFactor = sr/Gcd;
     }
-
-    currentNum=num*L/down;
-    utilities->setSampleFactor(L,down,currentNum);
-    sampleData = utilities->getSampleData(!appFilter);
-    _SampledWave->getGlwidget()->setL(L,currentNum,down,false);
-    _SampledWave->getGlwidget()->plotData=sampleData;
+    _sampleData.currentNum=num*_sampleData.upSampleFactor/_sampleData.downSampleFactor;
+    utilities->setSampleFactor(_sampleData.upSampleFactor,_sampleData.downSampleFactor,_sampleData.currentNum);
+    _sampleData.sampleData = utilities->getSampleData(!_selFilter->isChecked());
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),nums,currentNum);
-    _DisSpec->getWidget()->plotData=sampleData;
-    _DisSpec->getWidget()->setL(L,currentNum,down,false);
-}
-
-void MainWindow::getFilterdata()
-{
-    this->filterData=_FilterWidget->getWidget()->filterData;
+    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),nums,_sampleData.currentNum);
+    QVector<float> dpt;
+    float* tmpd = _sampleData.sampleData;
+    for( int i = 0; i < _sampleData.currentNum; i++ )
+        dpt.push_back(tmpd[i]);
+    int step = _sampleData.downSampleFactor/_sampleData.upSampleFactor;
+    _SampledWave->getWaveWidget()->setOffset(step);
+    QVector<float> tmps = utilities->getAmplitude(dpt);
+    _DisSpec->getSpecWidget()->setData(tmps);
+    _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
+    _ConSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
+    utilities->setFactor((float)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
+    utilities->setNyqFreq((float)_sampleData.upSampleFactor/_sampleData.downSampleFactor/2);
 }
 
 void MainWindow::applyFilters()
 {
-    getFilterdata();
+    QVector<float> filterdata = utilities->getFilterData();
     _filteredFileName = QDir::tempPath()+"/tmp2.wav";
-    ria->writeToWave(filterData,_filteredFileName.toLatin1().data(),sr,num);
-    if(L==1&&down==1)
+    ria->writeToWave(filterdata.data(),_filteredFileName.toLatin1().data(),sr,num);
+    if(_sampleData.upSampleFactor==1&&_sampleData.downSampleFactor==1)
     {
         utilities->setOnlyFiltered(true);
     }
@@ -690,96 +664,49 @@ void MainWindow::applyFilters()
     {
         utilities->setOnlyFiltered(false);
     }
-    utilities->setFilterData(filterData);
-    sampleData = utilities->getSampleData(false);
-    _SampledWave->getGlwidget()->plotData=sampleData;
-    _FilterWidget->getGLWidget()->updateGL();
-    _SampledWave->getGlwidget()->setL(L,currentNum,down,true);
+    _sampleData.sampleData = utilities->getSampleData(false);
+    _FilterWidget->getWaveWidget()->setData(filterdata);
+    QVector<float> tmp = utilities->getAmplitude(filterdata);
+    _FilterWidget->getSpecWidget()->setData(tmp);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(sampleData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
-    _SampledWave->getGlwidget()->updateGL();
-    _DisSpec->getWidget()->plotData=sampleData;
-    _DisSpec->getWidget()->setL(L,currentNum,down,true);
-    _DisSpec->getWidget()->updateGL();
-}
-
-void MainWindow::resetW1()
-{
-    _OrgWave->hSc->setSliderPosition(0);
-    _SampledWave->hSc->setSliderPosition(0);
-}
-
-void MainWindow::bindWaveScroll(int s)
-{
-   _SampledWave->hSc->setSliderPosition(s);
-   _OrgWave->hSc->setSliderPosition(s);
-}
-
-void MainWindow::resetSp()
-{
-    _ConSpec->hSc->setSliderPosition(0);
-    _DisSpec->hSc->setSliderPosition(0);
-}
-
-void MainWindow::bindSpecScroll(int s)
-{
-    _ConSpec->hSc->setSliderPosition(s);
-    _DisSpec->hSc->setSliderPosition(s);
-}
-
-void MainWindow::vresetW1()
-{
-    _OrgWave->vSc->setSliderPosition(0);
-    _SampledWave->vSc->setSliderPosition(0);
-}
-
-void MainWindow::vbindWaveScroll(int s)
-{
-    _OrgWave->vSc->setSliderPosition(s);
-    _SampledWave->vSc->setSliderPosition(s);
-}
-
-void MainWindow::vresetSp()
-{
-    _ConSpec->hSc->setSliderPosition(0);
-    _DisSpec->hSc->setSliderPosition(0);
-}
-
-void MainWindow::vbindSpecScroll(int s)
-{
-    _ConSpec->vSc->setSliderPosition(s);
-    _DisSpec->vSc->setSliderPosition(s);
+    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
+    QVector<float> dpt;
+    float* tmpd = _sampleData.sampleData;
+    for( int i = 0; i < _sampleData.currentNum; i++ )
+        dpt.push_back(tmpd[i]);
+     _SampledWave->getWaveWidget()->setData(filterdata);
+    QVector<float> tmps = utilities->getAmplitude(dpt);
+    _DisSpec->getSpecWidget()->setData(tmps);
+    _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
 }
 
 void MainWindow::setBits(int bits)
 {
     this->bits = bits;
     utilities->setBit(bits);
-    qData = utilities->getQuantize();
-    _SampledWave->getGlwidget()->plotData = qData;
-    _DisSpec->getWidget()->plotData = qData;
+    _quantizedData = utilities->getQuantize();
+    QVector<float> dpt = pointer2Qvec(_quantizedData,_sampleData.currentNum);
+    _SampledWave->getWaveWidget()->setData(utilities->getOrgQuan());
+     _SampledWave->getWaveWidget()->updateGL();
+    QVector<float> tmps = utilities->getAmplitude(dpt);
+    _DisSpec->getSpecWidget()->setData(tmps);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(qData,_sampleFileName.toLatin1().data(),sr*L/down,currentNum);
+    ria->writeToWave(_quantizedData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
     if(bits >= _trueBits)
     {
         SNR->setText("inf");
-        _SampledWave->getGlwidget()->updateGL();
+        _SampledWave->getWaveWidget()->updateGL();
     }
     else
     {
         double error=  utilities->computeError();
         double snr = utilities->getSNR(error);
-        _SampledWave->getGlwidget()->setSNR(snr);
-        _SampledWave->getGlwidget()->updateGL();
+        _SampledWave->getWaveWidget()->setSNR(snr);
     }
 }
 
 void MainWindow::resetEverything()
 {
-    vresetSp();
-    vresetW1();
-    resetSp();
-    resetW1();
     sampleRateSelect->setCurrentIndex(0);
     _showOnePeriod->setChecked(false);
     _showSampleRange->setChecked(false);
@@ -793,98 +720,17 @@ void MainWindow::resetEverything()
     bitBox->setEnabled(true);
 }
 
-void MainWindow::frozenScaling(bool i)
-{
-   _ConSpec->getWidget()->setBanned(i);
-    _ConSpec->hSc->setEnabled(!i);
-    _ConSpec->vSc->setEnabled(!i);
-    _ConSpec->hPlus->setEnabled(!i);
-    _ConSpec->vPlus->setEnabled(!i);
-    _ConSpec->hMinus->setEnabled(!i);
-    _ConSpec->vMinus->setEnabled(!i);
-}
-
 void MainWindow::displayAliasing(bool i)
 {
-    _DisSpec->getWidget()->setShowAliasing(i);
+    if(i)
+    {
+        QVector<float> tmpw = pointer2Qvec(_data,num);
+        QVector<float> tmps = utilities->getAmplitude(tmpw);
+        _DisSpec->getSpecWidget()->setDataForAliasing(tmps);
+    }
+    _DisSpec->getSpecWidget()->showAliasing(i);
     sampleRateSelect->setEnabled(!i);
     bitBox->setEnabled(!i);
-    resetSp();
-    vresetSp();
-}
-
-void MainWindow::wheelEvent(QWheelEvent *e)
-{
-    if(e->pos().x() > _OrgWave->pos().x() && e->pos().x()<(_OrgWave->pos().x()+_OrgWave->width()))
-    {
-        if(e->delta()>0)
-        {
-            double p = e->pos().x();
-            p = (float)p/_OrgWave->hSc->width() * 100 -50;
-
-            _OrgWave->getGlwidget()->setHshift(p);
-            _SampledWave->getGlwidget()->setHshift(p);
-            _OrgWave->getGlwidget()->hIncrease();
-            _SampledWave->getGlwidget()->hIncrease();
-
-        }
-        else
-        {
-
-            double p = e->pos().x();
-            p = (float)p/_OrgWave->hSc->width() * 100 -50;
-            _OrgWave->getGlwidget()->setHshift(p);
-            _SampledWave->getGlwidget()->setHshift(p);
-            _OrgWave->getGlwidget()->hDecrease();
-            _SampledWave->getGlwidget()->hDecrease();
-        }
-    }
-    else if(e->pos().x() > _ConSpec->pos().x() && e->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
-    {
-        if(e->delta()>0)
-        {
-            _DisSpec->getWidget()->hIncrease();
-            _ConSpec->getWidget()->hIncrease();
-        }
-        else
-        {
-            _DisSpec->getWidget()->hDecrease();
-            _ConSpec->getWidget()->hDecrease();
-        }
-    }
-
-}
-
-void MainWindow::mouseMoveEvent(QMouseEvent *event)
-{
-    if(event->buttons() & Qt::LeftButton)
-    {
-        if((event->pos().x() >= _OrgWave->pos().x()) && (event->pos().x()<= _OrgWave->pos().x()+_OrgWave->width()))
-        {
-            double p = event->pos().x();
-            p = (double)p/_OrgWave->width() * 100 -50;
-            _OrgWave->getGlwidget()->setHshift(p);
-            _SampledWave->getGlwidget()->setHshift(p);
-            _OrgWave->hSc->blockSignals(true);
-            _SampledWave->hSc->blockSignals(true);
-            bindWaveScroll(p);
-            _OrgWave->hSc->blockSignals(false);
-            _SampledWave->hSc->blockSignals(false);
-        }
-        else if(event->pos().x() > _ConSpec->pos().x() && event->pos().x()<(_ConSpec->width()+_ConSpec->pos().x()))
-        {
-            double p = event->pos().x()-_ConSpec->pos().x();
-
-            p = (double)p/_ConSpec->hSc->width() * 100 -50;
-            _DisSpec->hSc->blockSignals(true);
-            _ConSpec->hSc->blockSignals(true);
-            bindSpecScroll(p);
-            _DisSpec->hSc->blockSignals(false);
-            _ConSpec->hSc->blockSignals(false);
-           _DisSpec->getWidget()->setHshift(p);
-           _ConSpec->getWidget()->setHshift(p);
-        }
-    }
 }
 
 void MainWindow::enableNoiseSelect(bool i)
@@ -897,17 +743,21 @@ void MainWindow::enableNoiseSelect(bool i)
     if(!i)
     {
         for(int i =0; i < num; i++)
-            buf1[i] =_orgData[i];
-        utilities->updateUtilites(buf1,num);
+            _data[i] =_orgData[i];
+        utilities->updateUtilites(_data,num);
         _orgFileName=QDir::tempPath()+"/tmp.wav";
-        ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
-        _ConSpec->getWidget()->updateGL();
-         nonIntSr(sampleRateSelect->currentText());
-      _DisSpec->getWidget()->updateGL();
-        _OrgWave->getGlwidget()->updateGL();
-        _SampledWave->getGlwidget()->updateGL();
+        ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
+        QVector<float> tmpw = pointer2Qvec(_data,num);
+        QVector<float> tmps = utilities->getAmplitude(tmpw);
+        _ConSpec->getSpecWidget()->setData(tmps);
+     //   _ConSpec->getSpecWidget()->updateMax();
+        _SampledWave->getWaveWidget()->setData(tmpw);
+        _OrgWave->getWaveWidget()->setData(tmpw);
+        _OrgWave->getWaveWidget()->updateMax();
+        _SampledWave->getWaveWidget()->updateMax();
+        nonIntSr(sampleRateSelect->currentIndex());
+        //_DisSpec->getSpecWidget()->updateMax();
     }
-
 }
 
 void MainWindow::noiseAddfunc(int index)
@@ -925,17 +775,104 @@ void MainWindow::noiseAddfunc(int index)
     {
         freq = 0.75 * M_PI;
     }
-
-    for(int i =0; i < num; i++)
-        buf1[i] =(_orgData[i] + (float)sin(freq*i)/100.0)/1.2;
-    utilities->updateUtilites(buf1,num);
+    if(loadingFailed)
+    {
+        for(int i =0; i < num; i++)
+            _data[i] =(_orgData[i] + (float)sin(freq*i)/10.0)/1.1;
+    }
+    else
+    {
+        for(int i =0; i < num; i++)
+            _data[i] =(_orgData[i] + (float)sin(freq*i)/10.0)/1.1;
+    }
+    utilities->updateUtilites(_data,num);
     _orgFileName=QDir::tempPath()+"/tmp.wav";
     _sampleFileName = _orgFileName;
-    ria->writeToWave(buf1,_orgFileName.toAscii().data(),sr,num);
-     nonIntSr(sampleRateSelect->currentText());
-    _ConSpec->getWidget()->updateGL();
-  _DisSpec->getWidget()->updateGL();
-    _OrgWave->getGlwidget()->updateGL();
 
-    _SampledWave->getGlwidget()->updateGL();
+    ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
+     nonIntSr(sampleRateSelect->currentIndex());
+     QVector<float> tmpw = pointer2Qvec(_data,num);
+     QVector<float> tmps = utilities->getAmplitude(tmpw);
+     _ConSpec->getSpecWidget()->setData(tmps);
+     _SampledWave->getWaveWidget()->setData(tmpw);
+     _OrgWave->getWaveWidget()->setData(tmpw);
+     nonIntSr(sampleRateSelect->currentIndex());
+}
+
+QVector<float> MainWindow::pointer2Qvec(float *data,int size)
+{
+    QVector<float> tmp;
+    for( int i = 0; i < size; i++ )
+        tmp.push_back(data[i]);
+    return tmp;
+}
+
+void MainWindow::butterOrCheby(int index)
+{
+    if((index==-1)||(index==0))
+        utilities->butterOrCheby(true);
+    else utilities->butterOrCheby(false);
+}
+
+void MainWindow::setOrder(QString order)
+{
+    int ord=order.toInt();
+    if(ord > 15)
+    {
+       // if(filterData!=NULL)
+           // free(filterData);
+       // filterData=(float*)malloc(number*sizeof(float));
+       // for(int i = 0;i < number; i++)
+           // filterData[i] = data[i];
+        emit OrderTooHigh(true);
+        return;
+    }
+    utilities->setOrder(ord);
+}
+
+void MainWindow::setNyqFreq()
+{
+    utilities->setFactor(utilities->getNyq());
+    applyFilters();
+}
+
+void MainWindow::setRipple(QString ripple)
+{
+    float rip=ripple.toFloat();
+    if(rip <= 0)
+    {
+      //  if(filterData!=NULL)
+            //free(filterData);
+      //  filterData=(float*)malloc(number*sizeof(float));
+        emit RippleNotValid(true);
+        return;
+    }
+    else emit RippleNotValid(false);
+    utilities->setRipple(rip);
+}
+
+void MainWindow::setFilterDataToWidgets()
+{
+    QVector<float> filterdata = utilities->getFilterData();
+    _FilterWidget->getWaveWidget()->setData(filterdata);
+    _FilterWidget->show();
+    QVector<float> amt = utilities->getAmplitude(filterdata);
+    _FilterWidget->getSpecWidget()->setData(amt);
+    _sampleData.sampleData = utilities->getSampleData(false);
+    _sampleFileName = QDir::tempPath()+"/tmp1.wav";
+    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
+    QVector<float> dpt;
+    float* tmpd = _sampleData.sampleData;
+    for( int i = 0; i < _sampleData.currentNum; i++ )
+        dpt.push_back(tmpd[i]);
+     _SampledWave->getWaveWidget()->setData(filterdata);
+    QVector<float> tmps = utilities->getAmplitude(dpt);
+    _DisSpec->getSpecWidget()->setData(tmps);
+    _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
+}
+
+void MainWindow::setFactor(QString s)
+{
+    float factor=s.toFloat()/(float)sr;
+    utilities->setFactor(factor);
 }

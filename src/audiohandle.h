@@ -8,7 +8,6 @@
 #include<QDir>
 class AudioHandle
 {
-
 public:
     SNDFILE *sf;
     SF_INFO info;
@@ -18,9 +17,7 @@ public:
     int getSamplerate();
     int getChannel();
     float* getData(int num_items,int &num);
-
     void writeToWave(float* data, char* filename,float sr,int size);
-
     float* triangularMagnitude(float* data,int size);
 private:
     float *buf1;

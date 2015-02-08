@@ -4,15 +4,13 @@
 #include"string.h"
 #include <cmath>
 
-#include<QDebug>
+
 using namespace std;
 AudioHandle::AudioHandle(const QString& s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)
 {
     info.format = 0;
-
    sf = sf_open(s.toStdString().c_str(),SFM_READ,&info); //(s.toSdtString().c_str())
-
-    if (sf == NULL)
+   if (sf == NULL)
    {
        cout<<"Failed to open the file. "<<sf_strerror(sf)<<" "<<sf_error(sf)<<endl;
        info.channels = 1;
@@ -24,18 +22,20 @@ AudioHandle::AudioHandle(const QString& s):buf1(NULL) ,_triangularWave(NULL)//(c
    }
 }
 
-AudioHandle::~AudioHandle()
+AudioHandle::~AudioHandle(){}
+
+int AudioHandle::getFrameNum()
 {
-
-}
-
-int AudioHandle::getFrameNum(){
     return info.frames;
 }
-int AudioHandle::getSamplerate(){
+
+int AudioHandle::getSamplerate()
+{
     return info.samplerate;
 }
-int AudioHandle::getChannel(){
+
+int AudioHandle::getChannel()
+{
     return info.channels;
 }
 
@@ -56,13 +56,11 @@ float* AudioHandle::getData(int num_items,int& num)
 
 void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
 {
-
     SNDFILE   *outfile ;
     SF_INFO      sfinfo ;
     sfinfo.channels=1;
     sfinfo.samplerate=sr;
     sfinfo.format=info.format;
-    qDebug()<<info.format;
     if (! (outfile = sf_open (filename, SFM_WRITE,&sfinfo)))
     {   printf ("Not able to open output file %s.\n", filename) ;
         sf_perror (NULL) ;
@@ -109,7 +107,6 @@ float* AudioHandle::triangularMagnitude(float *data,int size)
     fftw_complex * in1 = (fftw_complex*)malloc(sizeof(fftw_complex)*size);
 
     p = fftw_plan_dft_1d(size,out,in1,FFTW_BACKWARD,FFTW_ESTIMATE);
-   // p = fftw_plan_dft_c2c_1d(size,out,in1,FFTW_BACKWARD | FFTW_ESTIMATE);
     fftw_execute(p);
     free(orgIn);
     fftw_destroy_plan(p);
@@ -119,8 +116,6 @@ float* AudioHandle::triangularMagnitude(float *data,int size)
         _triangularWave[i] = in1[size/2-i][0];
         _triangularWave[size -i-1]=in1[size/2-i][0];
     }
-
     free(in1);
     return _triangularWave;
-
 }

@@ -1,7 +1,7 @@
 #include "plotwidget.h"
 
-#include "glsw.h"
-#include "glospectrum.h"
+#include "glwidgetnew.h"
+#include "glspectrum.h"
 
 #include <QLabel>
 #include <QWheelEvent>
@@ -11,146 +11,102 @@
 #include <QScrollBar>
 
 #include<iostream>
+#include <QDebug>
 
 PlotWidget::PlotWidget(float *ria,int num,float time,bool sampleOrNot,QWidget *parent) :
-    QWidget(parent),widget1(NULL)
+    QWidget(parent),_spectrumWidget(NULL)
 {
-    widget=new GLSW(ria,num,time,sampleOrNot);
+    QVector<float> datapt;
+    for( int i = 0; i < num; i++ )
+        datapt.push_back(ria[i]);
+    _wavewidget = new GLWidgetnew(datapt,time,sampleOrNot);
     if(sampleOrNot)
     {
         domain=new QLabel("Discrete-time domain");
-        unit = new QLabel("    Time(sec)");
+        unit = new QLabel("    Time (sec)");
     }
     else
     {
         domain=new QLabel("Time domain");
-        unit = new QLabel("Time(sec)");
+        unit = new QLabel("Time (sec)");
     }
     initialCommonConp(true);
 }
 
-PlotWidget::PlotWidget(float *ria,int num,bool discrete,int sr,QWidget *parent)
-    :QWidget(parent),widget(NULL)
+PlotWidget::PlotWidget(const QVector<float>& data,bool discrete,int sr,QWidget *parent)
+    :QWidget(parent),_wavewidget(NULL)
 {
-    widget1=new GLOSpectrum(ria,num,discrete,sr);
     if(!discrete)
     {
         domain=new QLabel("   Frequency domain");
-        unit = new QLabel("Frequency in Hz( *1000)");
+        unit = new QLabel("Frequency in kHz");
+        _spectrumWidget = new GLSpectrum(data,discrete,1.0,sr);
     }
     else
     {
+        _spectrumWidget = new GLSpectrum(data,discrete,1.0,sr);
         domain=new QLabel("Discrete-time Fourier transform");
-        unit = new QLabel("        Frequency");
+        unit = new QLabel("        Frequency (Pi)");
     }
     initialCommonConp(false);
 }
 
-GLSW* PlotWidget::getGlwidget()
+
+GLWidgetnew* PlotWidget::getWaveWidget()
 {
-    return this->widget;
+    return this->_wavewidget;
 }
 
-void PlotWidget::resetw()
+GLSpectrum* PlotWidget::getSpecWidget()
 {
-    hSc->setSliderPosition(0);
-}
-
-GLOSpectrum* PlotWidget::getWidget()
-{
-    return this->widget1;
+    return _spectrumWidget;
 }
 
 void PlotWidget::initialCommonConp(bool wave)
 {
-    hSc=new QScrollBar(Qt::Horizontal);
-    hSc->setMinimum(-50);
-    vSc=new QScrollBar;
-    hSc->setMaximum(50);
-    hSc->setSliderPosition(0);
-    if(wave)
-        vSc->setMinimum(-100);
-    else
-        vSc->setMinimum(0);
-    vSc->setMaximum(100);
-
-    vReset=new QToolButton;
-    vReset->setText("R");
-    vReset->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    vReset->setFixedSize(20,20);
 
     hReset=new QToolButton;
     hReset->setText("R");
     hReset->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
     hReset->setFixedSize(20,20);
-
-    vPlus=new QToolButton;
-    vPlus->setText("+");
-    vPlus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    vPlus->setFixedSize(20,20);
-
-    vMinus=new QToolButton;
-    vMinus->setText("-");
-    vMinus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    vMinus->setFixedSize(20,20);
-
-    hPlus=new QToolButton;
-    hPlus->setText("+");
-    hPlus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    hPlus->setFixedSize(20,20);
-
-    hMinus=new QToolButton;
-    hMinus->setText("-");
-    hMinus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    hMinus->setFixedSize(20,20);
-
-    if(wave)
-    {
-        connect(hSc,SIGNAL(valueChanged(int)),widget,SLOT(intToDouble(int)));
-        connect(vSc,SIGNAL(valueChanged(int)),widget,SLOT(setVshift(int)));
-        connect(vReset,SIGNAL(clicked()),widget,SLOT(resetV()));
-        connect(hReset,SIGNAL(clicked()),widget,SLOT(resetH()));
-        connect(vPlus,SIGNAL(clicked()),widget,SLOT(vIncrease()));
-        connect(vMinus,SIGNAL(clicked()),widget,SLOT(vDecrease()));
-        connect(hPlus,SIGNAL(clicked()),widget,SLOT(hIncrease()));
-        connect(hMinus,SIGNAL(clicked()),widget,SLOT(hDecrease()));    
-    }
-    else
-    {
-        connect(hSc,SIGNAL(valueChanged(int)),widget1,SLOT(intToDouble(int)));
-        connect(vSc,SIGNAL(valueChanged(int)),widget1,SLOT(setVshift(int)));
-        connect(vReset,SIGNAL(clicked()),widget1,SLOT(resetV()));
-        connect(hReset,SIGNAL(clicked()),widget1,SLOT(resetH()));
-        connect(vPlus,SIGNAL(clicked()),widget1,SLOT(vIncrease()));
-        connect(vMinus,SIGNAL(clicked()),widget1,SLOT(vDecrease()));
-        connect(hPlus,SIGNAL(clicked()),widget1,SLOT(hIncrease()));
-        connect(hMinus,SIGNAL(clicked()),widget1,SLOT(hDecrease()));
-    }
-
     QGridLayout *ConpLayout = new QGridLayout;
-    QHBoxLayout* horizontalLayout1 = new QHBoxLayout;
-    horizontalLayout1->addWidget(hMinus);
-    horizontalLayout1->addWidget(hSc);
-    horizontalLayout1->addWidget(hPlus);
-    horizontalLayout1->addWidget(hReset);
-    horizontalLayout1->setAlignment(Qt::AlignHCenter);
-    ConpLayout->addLayout(horizontalLayout1,0,0,1,10);
-    ConpLayout->addWidget(vReset,8,14);
-    ConpLayout->addWidget(unit,8,5);
-    ConpLayout->addWidget(domain,1,5);
     if(wave)
     {
-        widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        ConpLayout->addWidget(widget,2,0,6,10);
+        connect(hReset,SIGNAL(clicked()),_wavewidget,SLOT(resetH()));
     }
     else
     {
-        widget1->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        ConpLayout->addWidget(widget1,2,0,6,10);
+        if(_spectrumWidget->getIsSample())
+        {
+            QToolButton* _yplus = new QToolButton;
+            _yplus->setText("Y+");
+            _yplus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+            _yplus->setFixedSize(20,20);
+            QToolButton* _yminus = new QToolButton;
+            _yminus->setText("Y-");
+            _yminus->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+            _yminus->setFixedSize(20,20);
+            connect(_yplus,SIGNAL(clicked()),_spectrumWidget,SLOT(vIncrease()));
+            connect(_yminus,SIGNAL(clicked()),_spectrumWidget,SLOT(vDecrease()));
+            ConpLayout->addWidget(_yplus,1,7);
+            ConpLayout->addWidget(_yminus,1,8);
+        }
+        connect(hReset,SIGNAL(clicked()),_spectrumWidget,SLOT(resetH()));
     }
-    ConpLayout->addWidget(vPlus,1,14);
-    ConpLayout->addWidget(vSc,2,14,5,1);
-    ConpLayout->addWidget(vMinus,7,14);
+    ConpLayout->addWidget(domain,1,5);
+    ConpLayout->addWidget(hReset,1,6);
+
+    if(wave)
+    {
+        _wavewidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        ConpLayout->addWidget(_wavewidget,2,0,6,10);
+    }
+    else
+    {
+        _spectrumWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        ConpLayout->addWidget(_spectrumWidget,2,0,6,10);
+    }
+    ConpLayout->addWidget(unit,9,5);
     setLayout(ConpLayout);
 }
 
