@@ -6,3 +6,5 @@ Libraries:
          phonon for playing the audio file,
          OpenGL for plotting
 
+
+![alt text](https://github.com/QtSignalProcessing/QtSignalProcessing/blob/master/GUI.png)
