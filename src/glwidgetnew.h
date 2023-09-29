@@ -1,9 +1,10 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
-#include <QGLWidget>
+//#include <QGLWidget>
+#include <QOpenGLWidget>
 
-class GLWidgetnew : public QGLWidget
+class GLWidgetnew : public QOpenGLWidget
 {
     Q_OBJECT
 public:
@@ -36,6 +37,9 @@ protected:
     void drawAxis();
     void yLabel(int offset = 35);
     void xLabel();
+    void renderText(double x, double y, double z, const QString text);
+
+
 
     void wheelEvent(QWheelEvent *);
     void mouseMoveEvent(QMouseEvent *event);

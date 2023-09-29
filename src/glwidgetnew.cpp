@@ -1,16 +1,18 @@
 #include "glwidgetnew.h"
 
-#include <QGLWidget>
+//#include <QGLWidget> qt4
+#include <QOpenGLWidget>
 #include <QDebug>
 #include <QWheelEvent>
 #include <QApplication>
 #include <QSize>
+#include <QPainter>
 
 #include <math.h>
 
 
 GLWidgetnew::GLWidgetnew(const QVector<float>&data,float time,bool isSample,QWidget* parent)
-    : QGLWidget(QGLFormat(QGL::NoSampleBuffers), parent),
+    : QOpenGLWidget(parent),
       _shiftX(0),
       _shiftY(0),
       _shiftXstart(0),
@@ -71,7 +73,7 @@ void GLWidgetnew::paintGL()
 
   //  _shiftX /= oldxscaleF/_xscaleF;
    // _shiftY /= oldyscaleF/_yscaleF;
-     drawAxis();
+    drawAxis();
     glTranslatef(float(_shiftX),float(_shiftY),0);
     glScalef(_xscalingF,_yscalingF,0);
     yLabel();
@@ -118,24 +120,27 @@ void GLWidgetnew::paintGL()
         }
     }
     glPopMatrix();
+   // yLabel();
+    //xLabel();
 }
 
 
 void GLWidgetnew::wheelEvent(QWheelEvent *event)
 {
-    if(event->delta()>0)
+
+    if(event->angleDelta().y() > 0)
     {
-      if(Qt::AltModifier != QApplication::keyboardModifiers())
-      {
+        if(Qt::AltModifier != QApplication::keyboardModifiers())
+        {
             setScalingX(_xscalingF*(1.0+_scalingFactorX));
-      }
+        }
     }
     else
     {
-      if(Qt::AltModifier != QApplication::keyboardModifiers())
-      {
+        if(Qt::AltModifier != QApplication::keyboardModifiers())
+        {
             setScalingX(_xscalingF*(1.0-_scalingFactorX));
-      }
+        }
     }
 }
 
@@ -199,95 +204,84 @@ float GLWidgetnew::getMin()
 
 void GLWidgetnew::mouseMoveEvent(QMouseEvent* event)
 {
-  this->setCursor(Qt::ArrowCursor);
+    this->setCursor(Qt::ArrowCursor);
+    _xMouse = event->pos().x() + _xboarder;
+    _yMouse = event->pos().y();
 
-  _xMouse = event->x()+ _xboarder;
-  _yMouse = event->y();
+    if(_xscalingF < 1.0)
+        return;
 
-  if(_xscalingF < 1.0)
-      return;
+    if(_mousePressed  && (event->buttons() & Qt::LeftButton)  )
+    {
+        if(_xscalingF!=1.0)
+        {
+            this->setCursor(Qt::ClosedHandCursor);
+        }
+        _shiftX = _shiftXstart + _xMouse - _mousePressedX - _xboarder;
+        _shiftY = _shiftYstart + _yMouse - _mousePressedY;
 
-  if(_mousePressed  && (event->buttons() & Qt::LeftButton)  )
-  {
-    if(_xscalingF!=1.0)
-    {
-      this->setCursor(Qt::ClosedHandCursor);
+        if(_shiftX > 0)
+        {
+            _shiftX = 0;
+            _shiftXstart = _shiftX;
+            _mousePressedX = _xMouse;
+        }
+        if(_shiftX < double(_Xmax)*_xscaleF*(1-_xscalingF))
+        {
+            _shiftX = double(_Xmax)*_xscaleF*(1-_xscalingF);
+            _shiftXstart = _shiftX;
+            _mousePressedX = _xMouse;
+        }
+        if(_linked)
+        {
+            emit xAxisShifted(_shiftX);
+            emit xAxisScaled(_xscalingF);
+        }
     }
-    _shiftX = _shiftXstart + _xMouse - _mousePressedX - _xboarder;
-    _shiftY = _shiftYstart + _yMouse - _mousePressedY;
-
-    if(_shiftX > 0)
-    {
-      _shiftX = 0;
-      _shiftXstart = _shiftX;
-      _mousePressedX = _xMouse;
-    }
-    if(_shiftX < double(_Xmax)*_xscaleF*(1-_xscalingF))
-    {
-      _shiftX = double(_Xmax)*_xscaleF*(1-_xscalingF);
-      _shiftXstart = _shiftX;
-      _mousePressedX = _xMouse;
-    }
-    if(_linked)
-    {
-      emit xAxisShifted(_shiftX);
-      emit xAxisScaled(_xscalingF);
-    }
-  }
-  updateGL();
+    update();
 }
 
 void GLWidgetnew::mousePressEvent(QMouseEvent* event)
 {
-  _mousePressedX = event->x();
-  _mousePressedY = event->y();
-  _mousePressed = true;
-  _shiftXstart = _shiftX;
-  _shiftYstart = _shiftY;
+    _mousePressedX = event->pos().x();
+    _mousePressedY = event->pos().y();
+    _mousePressed = true;
+    _shiftXstart = _shiftX;
+    _shiftYstart = _shiftY;
 }
 
 void GLWidgetnew::mouseReleaseEvent(QMouseEvent*)
 {
-  _mousePressed = false;
-  if(_xscalingF != 1.0)
-  {
-    this->setCursor(Qt::OpenHandCursor);
-  }
-  else
-  {
-    this->setCursor(Qt::ArrowCursor);
-  }
-
+    _mousePressed = false;
+    if(_xscalingF != 1.0)
+        this->setCursor(Qt::OpenHandCursor);
+    else
+        this->setCursor(Qt::ArrowCursor);
 }
 
 void GLWidgetnew::setScalingX(double scale)
 {
-  double oldScale = _xscalingF;
-  if(scale == oldScale)
-  {
-    return;
-  }
-  _xscalingF = scale;
-  if(scale < 1.0)
-  {
-    _xscalingF = 1.0;
-  }
-   double xcenter = (_xMouse-_shiftX+_xmin*_xscaleF)/_xscaleF/oldScale;
-  _shiftX -= qRound(xcenter*(_xscalingF-oldScale)*_xscaleF);
-  if(_shiftX < _Xmax*_xscaleF*(1-_xscalingF))
-  {
-    _shiftX = _Xmax*_xscaleF*(1-_xscalingF);
-  }
-  if(_shiftX > 0 || _xscalingF==1.0)
-  {
-    _shiftX = 0;
-  }
-  updateGL();
-  if(_linked)
-  {
-      emit xAxisScaled(_xscalingF);
-      emit xAxisShifted(_shiftX);
-  }
+    double oldScale = _xscalingF;
+    if(scale == oldScale)
+        return;
+    _xscalingF = scale;
+    if(scale < 1.0)
+        _xscalingF = 1.0;
+
+    double xcenter = (_xMouse-_shiftX+_xmin*_xscaleF)/_xscaleF/oldScale;
+    _shiftX -= qRound(xcenter*(_xscalingF-oldScale)*_xscaleF);
+    if(_shiftX < _Xmax*_xscaleF*(1-_xscalingF))
+        _shiftX = _Xmax*_xscaleF*(1-_xscalingF);
+
+    if(_shiftX > 0 || _xscalingF==1.0)
+        _shiftX = 0;
+
+    update();
+    if(_linked)
+    {
+        emit xAxisScaled(_xscalingF);
+        emit xAxisShifted(_shiftX);
+    }
 }
 
 void GLWidgetnew::DrawCircle(float cx, float cy, float r, int num_segments)
@@ -295,10 +289,10 @@ void GLWidgetnew::DrawCircle(float cx, float cy, float r, int num_segments)
     glBegin(GL_LINE_LOOP);
     for(int ii = 0; ii < num_segments; ii++)
     {
-           float theta = 2.0f * 3.1415926f * float(ii) / float(num_segments);//get the current angle
-           float x = r * cosf(theta);//calculate the x component
-           float y = r * sinf(theta);//calculate the y component
-           glVertex2f(x + cx, y + cy);//output vertex
+       float theta = 2.0f * 3.1415926f * float(ii) / float(num_segments);//get the current angle
+       float x = r * cosf(theta);//calculate the x component
+       float y = r * sinf(theta);//calculate the y component
+       glVertex2f(x + cx, y + cy);//output vertex
     }
     glEnd();
 }
@@ -348,7 +342,7 @@ void GLWidgetnew::drawAxis()
 void GLWidgetnew::setData(const QVector<float>&data)
 {
     _data = data;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::setSNR(double snr)
@@ -359,7 +353,7 @@ void GLWidgetnew::setSNR(double snr)
 void GLWidgetnew::setStickOn(bool i)
 {
     _stickon = i;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::resetH()
@@ -368,7 +362,7 @@ void GLWidgetnew::resetH()
     _shiftX = 0;
     _shiftY = 0;
     _yscalingF = 1.0;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::yLabel(int offset)
@@ -380,26 +374,28 @@ void GLWidgetnew::yLabel(int offset)
     uint grid = 1;
     while(!((int)(n*grid)>(_Ymax-_Ymin)))
     {
-      ++i;
-      grid = pow(10,i/3)*S[i%3];
+        ++i;
+        grid = pow(10,i/3)*S[i%3];
     }
     _yGrid = grid;
     glScalef(1.0/_xscalingF,1.0/_yscalingF,0);
+
     //draw y-grid
-    QFont f;
-    f.setPixelSize(10);
+
     for (int i = _Ymin; i <= _Ymax; i = i + _yGrid)
     {
-      double yPos = (_Ymax-i)*_yscaleF*_yscalingF;
-      double xPos = -_xmin*_xscaleF-_shiftX;
-      if(yPos < (_Ymax-_Ymin)*_yscaleF-_shiftY+1)
-      {
-          glBegin(GL_LINES);
-          glVertex2f(xPos-2, yPos);
-          glVertex2f(xPos+2, yPos);
-          glEnd();
-         renderText (xPos - offset,yPos+5 , 0, QString::number(i/10.0));
-      }
+        double yPos = (_Ymax-i)*_yscaleF*_yscalingF;
+        double xPos = -_xmin*_xscaleF-_shiftX;
+
+
+        if(yPos < (_Ymax-_Ymin)*_yscaleF-_shiftY+1)
+        {
+            glBegin(GL_LINES);
+            glVertex2f(xPos-4, yPos);
+            glVertex2f(xPos+4, yPos);
+            glEnd();
+        // renderText (xPos - offset,yPos+5 , 0, QString::number(i/10.0)); TODO
+        }
     }
     glScalef(_xscalingF,_yscalingF,0);
 }
@@ -438,8 +434,7 @@ void GLWidgetnew::xLabel()
     if(digit < 0)
         digit = 6;
     glScalef(1.0/_xscalingF,1.0/_yscalingF,0);
-    QFont f;
-    f.setPixelSize(10);
+
     int k = 0;
     for (int i = 0; i < _Xmax; i += _xGrid)
     {
@@ -452,9 +447,9 @@ void GLWidgetnew::xLabel()
         glVertex2f(xPos, yPos+2);
         glEnd();
       //  if(((xPos > -_shiftX - _xmin*_xscaleF + 10) &&(xPos < _Xmax*_xscaleF -_shiftX - _xmin*_xscaleF + 10 )) || (i == 0 && _shiftX == 0)  )
-        {
-            renderText (xPos - 10,yPos+15 , 0, QString::number(k*_step,'f',digit),f);
-        }
+
+      //  renderText (xPos - 10,yPos+15 , QString::number(k*_step,'f',digit));
+
         k++;
       }
     }
@@ -464,13 +459,13 @@ void GLWidgetnew::xLabel()
 void GLWidgetnew::setLinkedScale(double scale)
 {
     _xscalingF = scale;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::setLinkedShift(double shift)
 {
     _shiftX = shift;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::updateMax()
@@ -479,13 +474,13 @@ void GLWidgetnew::updateMax()
     _Ymax = getMax()*10;
     _Ymin = -getMax()*10;
     _Xmin = 0;
-    updateGL();
+    update();
 }
 
 void GLWidgetnew::setOffset(int offset)
 {
     _offset = offset;
-    updateGL();
+    update();
 }
 
 QSize GLWidgetnew::minimumSizeHint() const
@@ -506,4 +501,27 @@ bool GLWidgetnew::getIsSample()
 void GLWidgetnew::setTime(float time)
 {
     _time = time;
+}
+
+void GLWidgetnew::renderText(double x, double y, double z, const QString text)
+{
+    // Identify x and y locations to render text within widget
+    int height = this->height();
+    GLdouble textPosX = x, textPosY = y, textPosZ = z;
+
+    textPosY = height - textPosY; // y is inverted
+
+    // Retrieve last OpenGL color to use as a font color
+    GLdouble glColor[4];
+    glGetDoublev(GL_CURRENT_COLOR, glColor);
+    QColor fontColor = QColor(glColor[0], glColor[1], glColor[2], glColor[3]);
+
+    // Render text
+    QPainter painter(this);
+    painter.setPen(fontColor);
+    QFont f;
+    f.setPixelSize(10);
+    painter.setFont(f);
+    painter.drawText(textPosX, textPosY, text);
+    painter.end();
 }

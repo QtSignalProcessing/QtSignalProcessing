@@ -1,5 +1,6 @@
 #build folder
 build/
+build-*/
 
 #kdevelop settings
 .kdev4

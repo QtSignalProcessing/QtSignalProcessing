@@ -31,6 +31,7 @@ class Utilities
     double getNyq();
     QVector<float> getOrgQuan();
 
+
   private:
     int bits;
     int L;

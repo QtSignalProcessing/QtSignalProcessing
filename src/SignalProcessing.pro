@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT += core opengl
+QT += core widgets openglwidgets multimedia gui opengl
 
 #check Qt version
 QT_VERSION = $$[QT_VERSION]
@@ -44,7 +44,13 @@ HEADERS  += mainwindow.h \
 
 
 
-win32: INCLUDEPATH  += ../include
 
-unix: LIBS += -lsndfile -lfftw3 -lsamplerate
-win32: LIBS += ../lib/win32/sndfile.lib ../lib/win32/fftw3.lib ../lib/win32/samplerate.lib
+win32: LIBS += -L$$PWD/../../../../../../../msys64/mingw64/lib/ -lfftw3 -lsamplerate -lfreeglut -lglew32 -lopengl32
+
+INCLUDEPATH += $$PWD/../../../../../../../msys64/mingw64/include
+DEPENDPATH += $$PWD/../../../../../../../msys64/mingw64/include
+
+win32: LIBS += -L$$PWD/../../libsndfile/lib/ -llibsndfile-1
+
+INCLUDEPATH += $$PWD/../../libsndfile/include
+DEPENDPATH += $$PWD/../../libsndfile/include

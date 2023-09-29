@@ -1,7 +1,6 @@
 #include "audiohandle.h"
 #include<iostream>
 #include"fftw3.h"
-#include"string.h"
 #include <cmath>
 
 

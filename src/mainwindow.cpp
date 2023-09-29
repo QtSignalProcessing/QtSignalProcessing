@@ -21,6 +21,7 @@
 #include <QHBoxLayout>
 #include <QScrollBar>
 #include <QApplication>
+#include <QAudioOutput>
 
 #if QT_VERSION < 0x050000
 #include <phonon/MediaObject>
@@ -269,7 +270,8 @@ void MainWindow::createWidget(QWidget *main)
     ConpLayout->addWidget(rightWidget,2,3);
     _FilterWidget=new plotFilter(_data,num,false,sr,spec,0);
     _FilterWidget->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString)));
+    //connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString))); TODO
+    connect(sampleRateSelect,SIGNAL(currentTextChanged(QString)),_FilterWidget,SLOT(setComboText(QString)));
     _FilterWidget->hide();
     connect(_FilterWidget->play,SIGNAL(clicked()),this,SLOT(playfiltered()));
     connect(_FilterWidget,SIGNAL(closed(bool)),this,SLOT(showFilter(bool)));
@@ -278,7 +280,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_FilterWidget->getRippleEdit(),SIGNAL(textEdited(QString)),this,SLOT(setRipple(QString)));
     connect(_FilterWidget->getSetTonyqB(),SIGNAL(clicked()),this,SLOT(setNyqFreq()));
     connect(_FilterWidget->getApplyButton(),SIGNAL(clicked()),this,SLOT(applyFilters()));
-    connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString)));
+    //connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString))); TODO
+    connect(_FilterWidget->getCutFreq(),SIGNAL(currentTextChanged(QString)),this,SLOT(setFactor(QString)));
 }
 
 MainWindow::~MainWindow(){}
@@ -289,7 +292,9 @@ void MainWindow::play()
   Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  player->setMedia(QUrl::fromLocalFile(_orgFileName));
+  player->setSource(QUrl::fromLocalFile(_orgFileName));
+  QAudioOutput* audioOutput = new QAudioOutput;
+  player->setAudioOutput(audioOutput);
 #endif
   player->play();
 }
@@ -307,28 +312,32 @@ void MainWindow::playSample(){
   }
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  if (_sampleFileName == NULL)
+  if (_sampleFileName.isNull())
   {
-      player->setMedia(QUrl::fromLocalFile(_orgFileName));
+      player->setSource(QUrl::fromLocalFile(_orgFileName));
   }
   else
   {
-        player->setMedia(QUrl::fromLocalFile(_sampleFileName));
+        player->setSource(QUrl::fromLocalFile(_sampleFileName));
   }
 #endif
+  QAudioOutput* audioOutput = new QAudioOutput;
+  player->setAudioOutput(audioOutput);
   player->play();
 }
 
 void MainWindow::playfiltered()
 {
-  if(_filteredFileName!=NULL)
+  if(!_filteredFileName.isNull())
   {
 #if QT_VERSION < 0x050000
   Phonon::MediaObject* player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_filteredFileName));
 #else
   QMediaPlayer* player = new QMediaPlayer();
-  player->setMedia(QUrl::fromLocalFile(_filteredFileName));
+  player->setSource(QUrl::fromLocalFile(_filteredFileName));
 #endif
+  QAudioOutput* audioOutput = new QAudioOutput;
+  player->setAudioOutput(audioOutput);
   player->play();
   }
 }
@@ -687,7 +696,7 @@ void MainWindow::setBits(int bits)
     _quantizedData = utilities->getQuantize();
     QVector<float> dpt = pointer2Qvec(_quantizedData,_sampleData.currentNum);
     _SampledWave->getWaveWidget()->setData(utilities->getOrgQuan());
-     _SampledWave->getWaveWidget()->updateGL();
+     _SampledWave->getWaveWidget()->update();
     QVector<float> tmps = utilities->getAmplitude(dpt);
     _DisSpec->getSpecWidget()->setData(tmps);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
@@ -695,7 +704,7 @@ void MainWindow::setBits(int bits)
     if(bits >= _trueBits)
     {
         SNR->setText("inf");
-        _SampledWave->getWaveWidget()->updateGL();
+        _SampledWave->getWaveWidget()->update();
     }
     else
     {

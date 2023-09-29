@@ -8,6 +8,7 @@
 #include"chebyshevfilter.h"
 #include <stdio.h>
 #include <QDebug>
+
 using namespace std;
 Utilities::Utilities( float* data,int number):bits(0),L(1),down(1),data(data),qData(NULL),
     sampleData(NULL),filterData(NULL),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0),_butter(true),_NyqFreq(0),_order(3),_ripple(0.5),_factor(1.0)
@@ -104,9 +105,9 @@ QVector<float> Utilities::getOrgQuan()
     float step=2*max/(float)num;
     float* level = (float*)malloc(sizeof(float)*num);
     for(int i=0;i<num;i++)
-      {
+    {
           level[i]=-max+step*(float)i;
-      }
+    }
     float index;
     for(int i=0;i<number;i++)
     {
@@ -226,9 +227,10 @@ float* Utilities::getSampleData(bool org)
     int	error ;
     /* Initialize the sample rate converter. */
     if ((src_state = src_new (0, 1, &error)) == NULL)
-    {	printf ("\n\nError : src_new() failed : %s.\n\n", src_strerror (error)) ;
-            exit (1) ;
-            } ;
+    {
+        printf ("\n\nError : src_new() failed : %s.\n\n", src_strerror (error)) ;
+        exit (1) ;
+    } ;
     src_data.input_frames =number;
     if(!org)
     {

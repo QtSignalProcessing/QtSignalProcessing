@@ -29,9 +29,9 @@ void GLSpectrum::paintGL()
     drawAxis();
     glTranslatef(float(_shiftX),float(_shiftY),0);
     glScalef(_xscalingF,_yscalingF,0);
-
     yLabel();
     xLabel();
+
     if(_showRange)
         plotRange();
     if(!_isSample)
@@ -47,14 +47,14 @@ void GLSpectrum::paintGL()
 
         if(_xscalingF< 1.0 )
         {
-        glBegin(GL_LINES);
-        glVertex2f((-_xmin*_xscaleF-_shiftX)/_xscalingF  ,(_Ymax)*_yscaleF);
-        glVertex2f(_xboarder,(_Ymax)*_yscaleF);
-        glEnd();
-        glBegin(GL_LINES);
-        glVertex2f((_data.size()-_xmin*_xscaleF-_shiftX)/_xscalingF  ,(_Ymax)*_yscaleF);
-        glVertex2f(_width,(_Ymax)*_yscaleF);
-        glEnd();
+            glBegin(GL_LINES);
+            glVertex2f((-_xmin*_xscaleF-_shiftX)/_xscalingF  ,(_Ymax)*_yscaleF);
+            glVertex2f(_xboarder,(_Ymax)*_yscaleF);
+            glEnd();
+            glBegin(GL_LINES);
+            glVertex2f((_data.size()-_xmin*_xscaleF-_shiftX)/_xscalingF  ,(_Ymax)*_yscaleF);
+            glVertex2f(_width,(_Ymax)*_yscaleF);
+            glEnd();
         }
     }
     else
@@ -83,51 +83,54 @@ void GLSpectrum::paintGL()
 
 void GLSpectrum::setScalingX(double scale)
 {
-  double oldScale = _xscalingF;
-  if(scale == oldScale)
-  {
-    return;
-  }
-  _xscalingF = scale;
-  if(scale < 1.0)
-  {
-      int size;
-      if(_ratio<1.0)
-          size = _data.size()/_ratio;
-      else
-          size = _data.size();
-     _shiftX = (double)(this->width()-_xboarder)/2 - (size/2 - _shiftX) * _xscaleF * _xscalingF;
-     if(_linked)
-     {
-         emit xAxisShifted(_shiftX);
-         emit xAxisScaled(_xscalingF);
-     }
-      updateGL();
-      return;
-  }
+    double oldScale = _xscalingF;
+    if(scale == oldScale)
+    {
+        return;
+    }
+    _xscalingF = scale;
+    if(scale < 1.0)
+    {
+        int size;
+        if(_ratio<1.0)
+            size = _data.size()/_ratio;
+        else
+            size = _data.size();
+       _shiftX = (double)(this->width()-_xboarder)/2 - (size/2 - _shiftX) * _xscaleF * _xscalingF;
+       if(_linked)
+       {
+           emit xAxisShifted(_shiftX);
+           emit xAxisScaled(_xscalingF);
+       }
+      //updateGL();
+        update();
+        return;
+    }
 
-   double xcenter = (_xMouse-_shiftX+_xmin*_xscaleF)/_xscaleF/oldScale;
-  _shiftX -= qRound(xcenter*(_xscalingF-oldScale)*_xscaleF);
-  if(_shiftX < _Xmax*_xscaleF*(1-_xscalingF))
-  {
-    _shiftX = _Xmax*_xscaleF*(1-_xscalingF);
-  }
-  if(_shiftX > 0 || _xscalingF==1.0)
-  {
-    _shiftX = 0;
-  }
-  if(_linked)
-  {
-    emit xAxisShifted(_shiftX);
-    emit xAxisScaled(_xscalingF);
-  }
-  updateGL();
+     double xcenter = (_xMouse-_shiftX+_xmin*_xscaleF)/_xscaleF/oldScale;
+    _shiftX -= qRound(xcenter*(_xscalingF-oldScale)*_xscaleF);
+    if(_shiftX < _Xmax*_xscaleF*(1-_xscalingF))
+    {
+      _shiftX = _Xmax*_xscaleF*(1-_xscalingF);
+    }
+    if(_shiftX > 0 || _xscalingF==1.0)
+    {
+      _shiftX = 0;
+    }
+    if(_linked)
+    {
+      emit xAxisShifted(_shiftX);
+      emit xAxisScaled(_xscalingF);
+    }
+        //updateGL();
+    update();
 }
 
 void GLSpectrum::show1Period(bool i)
 {
     _onePeriod = i;
-    updateGL();
+   // updateGL();
+    update();
 }
 
 void GLSpectrum::setRatio(double ratio)
@@ -139,7 +142,8 @@ void GLSpectrum::setRatio(double ratio)
     }
     else
         _rangeRatio = ratio;
-    updateGL();
+    //updateGL();
+    update();
 }
 
 void GLSpectrum::updateY()
@@ -152,7 +156,8 @@ void GLSpectrum::updateY()
 void GLSpectrum::showAliasing(bool i)
 {
     _showAliasing = i;
-    updateGL();
+    //updateGL();
+    update();
 }
 
 void GLSpectrum::setDataForAliasing(QVector<float> &data)
@@ -261,7 +266,8 @@ void GLSpectrum::showSampleRange(int i)
     }else{
         _showRange=true;
     }
-    updateGL();
+    //updateGL();
+    update();
 }
 
 void GLSpectrum::plotRange()
@@ -328,19 +334,22 @@ void GLSpectrum::plot2Freq()
 void GLSpectrum::show2F(bool state)
 {
     _plot2Freq = state;
-    updateGL();
+  //  updateGL();
+    update();
 }
 
 void GLSpectrum::conDis(bool state)
 {
     _conFirst = state;
-    updateGL();
+    //updateGL();
+    update();
 }
 
 void GLSpectrum::disCon(bool state)
 {
     _conFirst = !state;
-    updateGL();
+    //updateGL();
+    update();
 }
 
 void GLSpectrum::yLabel()
@@ -388,8 +397,7 @@ void GLSpectrum::yLabel()
        //   qDebug()<<_yGrid<<" "<<max<<" "<<_Ymax<<" "<<_sampleRate<<" "<<_ystep<<" "<<num<<" "<<_Ymin;
         glScalef(1.0/_xscalingF,1.0/_yscalingF,0);
         //draw y-grid
-        QFont f;
-        f.setPixelSize(10);
+
         double tmp = 1000000;
       //  double  yscaleF = (double)(this->height()-_yboarder)*ratio/(double)(max-_Ymin);
         int k =0;
@@ -403,7 +411,7 @@ void GLSpectrum::yLabel()
               glVertex2f(xPos-2, yPos);
               glVertex2f(xPos+2, yPos);
               glEnd();
-             renderText (xPos - 25,yPos+5 , 0, QString::number(k*_ystep),f);
+              //renderText (xPos - 25,yPos+5, QString::number(k*_ystep));
              tmp = yPos;
              k++;
           }
@@ -463,7 +471,7 @@ void GLSpectrum::xLabel()
             glVertex2f(xPos, yPos-2);
             glVertex2f(xPos, yPos+2);
             glEnd();
-            renderText (xPos - 10/_xscalingF ,yPos+15 , 0, QString::number(k*_step,'f',digit),f);
+          //  renderText (xPos - 10/_xscalingF ,yPos+15, QString::number(k*_step,'f',digit));
             k++;
           }
         }
@@ -478,7 +486,7 @@ void GLSpectrum::xLabel()
             glVertex2f(xPos, yPos-2);
             glVertex2f(xPos, yPos+2);
             glEnd();
-            renderText (xPos - xoffset/_xscalingF ,yPos+15 , 0, QString::number(k*_step,'f',digit),f);
+           // renderText (xPos - xoffset/_xscalingF ,yPos+15 , QString::number(k*_step,'f',digit));
             k--;
           }
         }
@@ -496,8 +504,8 @@ void GLSpectrum::xLabel()
         glVertex2f(firEnd, yPos-2);
         glVertex2f(firEnd, yPos+2);
         glEnd();
-        renderText (firEnd,yPos+15 , 0, QString::number(-max/2,'f',2),f);
-        renderText (secEnd,yPos+15 , 0, QString::number(max/2,'f',2),f);
+     //   renderText (firEnd,yPos+15 , 0, QString::number(-max/2,'f',2),f);
+      //  renderText (secEnd,yPos+15 , 0, QString::number(max/2,'f',2),f); TODO
     }
     else if(_ratio < 1.0 || (_xscalingF < 1.0&&_isSample))
     {
@@ -513,7 +521,7 @@ void GLSpectrum::xLabel()
             glVertex2f(center + k * space, yPos-2/_yscalingF);
             glVertex2f(center + k * space , yPos+2/_yscalingF);
             glEnd();
-            renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k));
+         //   renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k)); TODO
             k++;
         }
         k = -1;
@@ -523,7 +531,7 @@ void GLSpectrum::xLabel()
             glVertex2f(center + k * space, yPos-2/_yscalingF);
             glVertex2f(center + k * space , yPos+2/_yscalingF);
             glEnd();
-            renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k));
+         //   renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k)); TODO
             k--;
         }
     }
@@ -559,7 +567,8 @@ void GLSpectrum::setScalingY(double scale)
       {
      //   _shiftY=0;
       }
-      updateGL();
+     // updateGL();
+      update();
 }
 
 void GLSpectrum::vIncrease()
