@@ -40,14 +40,17 @@ int AudioHandle::getChannel()
 
 float* AudioHandle::getData(int num_items,int& num)
 {
-    if(buf1 != NULL)
-        free(buf1);
-    buf1=(float *)malloc(num_items*sizeof(float));
-    if(sf == NULL)
+    if(buf1 != nullptr)
+        //free(buf1);
+       delete[] buf1;
+    //buf1=(float *)malloc(num_items*sizeof(float));
+    buf1 = new float[num_items*sizeof(float)];
+    if(sf == nullptr)
     {
-        free(buf1);
+        //free(buf1);
+       delete[] buf1;
         num = 20000;
-        return NULL;
+        return nullptr;
     }
     num=sf_readf_float(sf,buf1,num_items);
     return buf1;

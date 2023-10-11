@@ -3,6 +3,7 @@
 
 //#include <QGLWidget>
 #include <QOpenGLWidget>
+#include <QOpenGLFramebufferObject>
 
 class GLWidgetnew : public QOpenGLWidget
 {
@@ -37,8 +38,9 @@ protected:
     void drawAxis();
     void yLabel(int offset = 35);
     void xLabel();
-    void renderText(double x, double y, double z, const QString text);
-
+    void renderText(double x, double y, const QString text);
+    static void qt_save_gl_state();
+    static void qt_restore_gl_state();
 
 
     void wheelEvent(QWheelEvent *);
@@ -82,7 +84,6 @@ protected:
     bool _stickon;
     float _time;
     int _offset;
-
 private:
 
 

@@ -3,9 +3,12 @@
 
 #include <QVector>
 
+int gcd(int v1,int v2);
+
+
 class Utilities
 {
-  public:
+public:
     Utilities( float* data,int number);
     ~Utilities();
     void setBit(int bits);
@@ -32,7 +35,7 @@ class Utilities
     QVector<float> getOrgQuan();
 
 
-  private:
+private:
     int bits;
     int L;
     int down;

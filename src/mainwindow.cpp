@@ -30,8 +30,8 @@
 #endif
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),_data(NULL),_quantizedData(NULL),bits(0),tmpData(NULL),ifShowAlias(false),
-     _trueBits(0),_selFilter(NULL),_showAliasing(NULL),_showSampleRange(NULL),_showOnePeriod(NULL),loadingFailed(false),_orgData(NULL),
+    : QMainWindow(parent),_data(nullptr),_quantizedData(nullptr),bits(0),tmpData(nullptr),ifShowAlias(false),
+     _trueBits(0),_selFilter(nullptr),_showAliasing(nullptr),_showSampleRange(nullptr),_showOnePeriod(nullptr),loadingFailed(false),_orgData(nullptr),
       _orgFileName(),_sampleFileName(),_filteredFileName(),_samplingRates(),_filterData(),_sampleData()
 {
     createActions();
@@ -56,17 +56,16 @@ void MainWindow::initializeVar()
     int c=ria->getChannel();
     int num_items = f*c;
     time=(float)num_items/sr;
-    qDebug()<<time;
-    if(_data!=NULL)
-        free(_data);
+    if(_data != nullptr)
+        delete[] _data;
     _data=ria->getData(num_items,num);
     if(_data)
     {
         _sampleData.currentNum = num;
         loadingFailed = false;
-        if(_orgData!=NULL)
-            free(_orgData);
-        _orgData = (float*)malloc(num*sizeof(float));
+        if(_orgData!=nullptr)
+            delete _orgData;
+        _orgData = new float[num*sizeof(float)];
         for(int i =0; i < num; i++)
         {
             _orgData[i] =_data[i] ;
@@ -76,11 +75,11 @@ void MainWindow::initializeVar()
     {
         num = 20000;
         _sampleData.currentNum=num;
-        _data = (float*)malloc(sizeof(float)*num);
+        _data = new float[sizeof(float)*num];
         sr = 11025;
         for(int i = 0; i< 20000;i++)
             _data[i] = (sin(i*3.14/2));
-        _orgData = (float*)malloc(num*sizeof(float));
+        _orgData = new float[sizeof(float)*num];
         for(int i =0; i < num; i++)
             _orgData[i] =_data[i] ;
         loadingFailed = true;
@@ -270,7 +269,7 @@ void MainWindow::createWidget(QWidget *main)
     ConpLayout->addWidget(rightWidget,2,3);
     _FilterWidget=new plotFilter(_data,num,false,sr,spec,0);
     _FilterWidget->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-    //connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString))); TODO
+   // connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString))); //TODO
     connect(sampleRateSelect,SIGNAL(currentTextChanged(QString)),_FilterWidget,SLOT(setComboText(QString)));
     _FilterWidget->hide();
     connect(_FilterWidget->play,SIGNAL(clicked()),this,SLOT(playfiltered()));
@@ -280,7 +279,7 @@ void MainWindow::createWidget(QWidget *main)
     connect(_FilterWidget->getRippleEdit(),SIGNAL(textEdited(QString)),this,SLOT(setRipple(QString)));
     connect(_FilterWidget->getSetTonyqB(),SIGNAL(clicked()),this,SLOT(setNyqFreq()));
     connect(_FilterWidget->getApplyButton(),SIGNAL(clicked()),this,SLOT(applyFilters()));
-    //connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString))); TODO
+  //  connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString)));// TODO
     connect(_FilterWidget->getCutFreq(),SIGNAL(currentTextChanged(QString)),this,SLOT(setFactor(QString)));
 }
 
@@ -302,7 +301,7 @@ void MainWindow::play()
 void MainWindow::playSample(){
 #if QT_VERSION < 0x050000
   Phonon::MediaObject* player;
-  if (_sampleFileName == NULL)
+  if (_sampleFileName == nullptr)
   {
     player = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(_orgFileName));
   }
@@ -425,83 +424,83 @@ void MainWindow::loadFile(const QString &fileName)
               QString::number(sr/7)+" 1/7 of max Sampling rate"<<QString::number(sr/8)+" 1/8 of max Sampling rate"<<QString::number(sr/9)+" 1/9 of max Sampling rate"<<
               QString::number(sr/10)+" 1/10 of max Sampling rate"<<QString::number(sr/20)+" 1/20 of max Sampling rate";
     }
-   _samplingRates.clear();
-   for(int i=1;i<=10;i++)
-   {
+    _samplingRates.clear();
+    for(int i=1;i<=10;i++)
+    {
        int k = sr/i;
        _samplingRates.append(k);
-   }
-   int k = sr/20;
-   _samplingRates.append(k);
-   sampleRateSelect->blockSignals(true);
-   sampleRateSelect->clear();
-   sampleRateSelect->addItems(texts);
-   sampleRateSelect->blockSignals(false);
-   QVector<float> dpt = pointer2Qvec(_data,num);
-   _OrgWave->getWaveWidget()->setTime(time);
-  _OrgWave->getWaveWidget()->setData(dpt);
-  _OrgWave->getWaveWidget()->updateMax();
-  _OrgWave->getWaveWidget()->resetH();
+    }
+    int k = sr/20;
+    _samplingRates.append(k);
+    sampleRateSelect->blockSignals(true);
+    sampleRateSelect->clear();
+    sampleRateSelect->addItems(texts);
+    sampleRateSelect->blockSignals(false);
+    QVector<float> dpt = pointer2Qvec(_data,num);
+    _OrgWave->getWaveWidget()->setTime(time);
+    _OrgWave->getWaveWidget()->setData(dpt);
+    _OrgWave->getWaveWidget()->updateMax();
+    _OrgWave->getWaveWidget()->resetH();
 
-  _SampledWave->getWaveWidget()->setTime(time);
-  _SampledWave->getWaveWidget()->setData(dpt);
-  _SampledWave->getWaveWidget()->updateMax();
-  _SampledWave->getWaveWidget()->setOffset(1);
-  _SampledWave->getWaveWidget()->resetH();
+    _SampledWave->getWaveWidget()->setTime(time);
+    _SampledWave->getWaveWidget()->setData(dpt);
+    _SampledWave->getWaveWidget()->updateMax();
+    _SampledWave->getWaveWidget()->setOffset(1);
+    _SampledWave->getWaveWidget()->resetH();
 
-  QVector<float> tmps = utilities->getAmplitude(dpt);
-  _ConSpec->getSpecWidget()->setData(tmps);
-  _ConSpec->getSpecWidget()->updateMax();
-  _ConSpec->getSpecWidget()->setRatio(1.0);
-  _ConSpec->getSpecWidget()->updateSampleRate(sr);
-  _ConSpec->getSpecWidget()->showSampleRange(0);
-  _ConSpec->getSpecWidget()->resetH();
+    QVector<float> tmps = utilities->getAmplitude(dpt);
+    _ConSpec->getSpecWidget()->setData(tmps);
+    _ConSpec->getSpecWidget()->updateMax();
+    _ConSpec->getSpecWidget()->setRatio(1.0);
+    _ConSpec->getSpecWidget()->updateSampleRate(sr);
+    _ConSpec->getSpecWidget()->showSampleRange(0);
+    _ConSpec->getSpecWidget()->resetH();
 
-  _DisSpec->getSpecWidget()->setData(tmps);
-  _DisSpec->getSpecWidget()->updateMax();
-  _DisSpec->getSpecWidget()->setRatio(1.0);
-  _DisSpec->getSpecWidget()->updateSampleRate(sr);
-  _DisSpec->getSpecWidget()->showAliasing(false);
-  _DisSpec->getSpecWidget()->showSampleRange(0);
-  _DisSpec->getSpecWidget()->show1Period(false);
-  _DisSpec->getSpecWidget()->show2F(false);
-  _DisSpec->getSpecWidget()->resetH();
+    _DisSpec->getSpecWidget()->setData(tmps);
+    _DisSpec->getSpecWidget()->updateMax();
+    _DisSpec->getSpecWidget()->setRatio(1.0);
+    _DisSpec->getSpecWidget()->updateSampleRate(sr);
+    _DisSpec->getSpecWidget()->showAliasing(false);
+    _DisSpec->getSpecWidget()->showSampleRange(0);
+    _DisSpec->getSpecWidget()->show1Period(false);
+    _DisSpec->getSpecWidget()->show2F(false);
+    _DisSpec->getSpecWidget()->resetH();
 
-  _FilterWidget->getWaveWidget()->setData(dpt);
-  _FilterWidget->getWaveWidget()->updateMax();
-  _FilterWidget->getWaveWidget()->resetH();
-  _FilterWidget->getSpecWidget()->setData(tmps);
-  _FilterWidget->getSpecWidget()->updateMax();
-  _FilterWidget->getSpecWidget()->setRatio(1.0);
-  _FilterWidget->getSpecWidget()->updateSampleRate(sr);
-   updateFilter();
-   utilities->updateUtilites(_data,num);
-   if(loadingFailed)
-   {
+    _FilterWidget->getWaveWidget()->setData(dpt);
+    _FilterWidget->getWaveWidget()->updateMax();
+    _FilterWidget->getWaveWidget()->resetH();
+    _FilterWidget->getSpecWidget()->setData(tmps);
+    _FilterWidget->getSpecWidget()->updateMax();
+    _FilterWidget->getSpecWidget()->setRatio(1.0);
+    _FilterWidget->getSpecWidget()->updateSampleRate(sr);
+    updateFilter();
+    utilities->updateUtilites(_data,num);
+    if(loadingFailed)
+    {
        _trueBits = 16;
-   }
-   else
-   {
+    }
+    else
+    {
     _trueBits = utilities->computeTrueBits();
-   }
-   bitBox->setMaximum(_trueBits);
-   bitBox->setValue(_trueBits);
-   showFilter(false);
-   resetEverything();
-   if(loadingFailed)
-   {
+    }
+    bitBox->setMaximum(_trueBits);
+    bitBox->setValue(_trueBits);
+    showFilter(false);
+    resetEverything();
+    if(loadingFailed)
+    {
        QMessageBox error;
        error.setText("Default audio file open failed, and sin signal with noise will be shown");
        error.exec();
-   }
-   _addNoise->setChecked(false);
-   _selectNoise->setEnabled(false);
-   _selectNoise->blockSignals(true);
-   _selectNoise->clear();
-   texts.clear();
-   texts<<QString::number(sr/4)<<QString::number(sr/2)<<QString::number(3*sr/4);
-   _selectNoise->addItems(texts);
-   _selectNoise->blockSignals(false);
+    }
+    _addNoise->setChecked(false);
+    _selectNoise->setEnabled(false);
+    _selectNoise->blockSignals(true);
+    _selectNoise->clear();
+    texts.clear();
+    texts<<QString::number(sr/4)<<QString::number(sr/2)<<QString::number(3*sr/4);
+    _selectNoise->addItems(texts);
+    _selectNoise->blockSignals(false);
 }
 
 void MainWindow::updateFilter()
@@ -614,16 +613,6 @@ void MainWindow::showFilter(bool i)
     }
 }
 
-int MainWindow::gcd(int v1,int v2)
-{
-    while(v2)
-    {
-        int temp=v2;
-        v2=v1%v2;
-        v1=temp;
-    }
-    return v1;
-}
 
 void MainWindow::nonIntSr(int s)
 {
@@ -637,7 +626,7 @@ void MainWindow::nonIntSr(int s)
     }
     else
     {
-        int Gcd=gcd(nums,sr);
+        int Gcd = gcd(nums,sr);
         _sampleData.upSampleFactor= nums/Gcd;
         _sampleData.downSampleFactor = sr/Gcd;
     }

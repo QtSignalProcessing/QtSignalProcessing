@@ -1,4 +1,5 @@
 #include "glspectrum.h"
+#include <QPainter>
 
 #include <math.h>
 
@@ -122,7 +123,7 @@ void GLSpectrum::setScalingX(double scale)
       emit xAxisShifted(_shiftX);
       emit xAxisScaled(_xscalingF);
     }
-        //updateGL();
+
     update();
 }
 
@@ -138,11 +139,9 @@ void GLSpectrum::setRatio(double ratio)
     if(_isSample)
     {
         _ratio = ratio;
-
     }
     else
         _rangeRatio = ratio;
-    //updateGL();
     update();
 }
 
@@ -156,7 +155,6 @@ void GLSpectrum::updateY()
 void GLSpectrum::showAliasing(bool i)
 {
     _showAliasing = i;
-    //updateGL();
     update();
 }
 
@@ -266,7 +264,6 @@ void GLSpectrum::showSampleRange(int i)
     }else{
         _showRange=true;
     }
-    //updateGL();
     update();
 }
 
@@ -393,13 +390,10 @@ void GLSpectrum::yLabel()
             _ystep = -_ystep;
         int num = max / _ystep;
         _yGrid = _Ymax/num;
-      //  double ratio = _ratio*_sampleRate;
-       //   qDebug()<<_yGrid<<" "<<max<<" "<<_Ymax<<" "<<_sampleRate<<" "<<_ystep<<" "<<num<<" "<<_Ymin;
         glScalef(1.0/_xscalingF,1.0/_yscalingF,0);
         //draw y-grid
 
-        double tmp = 1000000;
-      //  double  yscaleF = (double)(this->height()-_yboarder)*ratio/(double)(max-_Ymin);
+
         int k =0;
         for (int i = _Ymin; i <= _Ymax; i = i + _yGrid)
         {
@@ -411,8 +405,9 @@ void GLSpectrum::yLabel()
               glVertex2f(xPos-2, yPos);
               glVertex2f(xPos+2, yPos);
               glEnd();
-              //renderText (xPos - 25,yPos+5, QString::number(k*_ystep));
-             tmp = yPos;
+              qt_save_gl_state();
+              renderText(xPos - 25,yPos+5, QString::number(k*_ystep));
+              qt_restore_gl_state();
              k++;
           }
         }
@@ -471,7 +466,10 @@ void GLSpectrum::xLabel()
             glVertex2f(xPos, yPos-2);
             glVertex2f(xPos, yPos+2);
             glEnd();
-          //  renderText (xPos - 10/_xscalingF ,yPos+15, QString::number(k*_step,'f',digit));
+
+            qt_save_gl_state();
+            xrenderText(xPos - 10/_xscalingF ,yPos+15, QString::number(k*_step,'f',digit));
+            qt_restore_gl_state();
             k++;
           }
         }
@@ -486,7 +484,10 @@ void GLSpectrum::xLabel()
             glVertex2f(xPos, yPos-2);
             glVertex2f(xPos, yPos+2);
             glEnd();
-           // renderText (xPos - xoffset/_xscalingF ,yPos+15 , QString::number(k*_step,'f',digit));
+
+            qt_save_gl_state();
+            xrenderText(xPos - xoffset/_xscalingF ,yPos+15 , QString::number(k*_step,'f',digit));
+            qt_restore_gl_state();
             k--;
           }
         }
@@ -504,8 +505,13 @@ void GLSpectrum::xLabel()
         glVertex2f(firEnd, yPos-2);
         glVertex2f(firEnd, yPos+2);
         glEnd();
-     //   renderText (firEnd,yPos+15 , 0, QString::number(-max/2,'f',2),f);
-      //  renderText (secEnd,yPos+15 , 0, QString::number(max/2,'f',2),f); TODO
+
+        qt_save_gl_state();
+        xrenderText(firEnd,yPos+15 , QString::number(-max/2,'f',2));
+        qt_restore_gl_state();
+        qt_save_gl_state();
+        xrenderText(secEnd,yPos+15 , QString::number(max/2,'f',2));
+        qt_restore_gl_state();
     }
     else if(_ratio < 1.0 || (_xscalingF < 1.0&&_isSample))
     {
@@ -521,7 +527,10 @@ void GLSpectrum::xLabel()
             glVertex2f(center + k * space, yPos-2/_yscalingF);
             glVertex2f(center + k * space , yPos+2/_yscalingF);
             glEnd();
-         //   renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k)); TODO
+
+            qt_save_gl_state();
+            xrenderText(center + k * space ,yPos+15/_yscalingF , QString::number(k));
+            qt_restore_gl_state();
             k++;
         }
         k = -1;
@@ -531,7 +540,10 @@ void GLSpectrum::xLabel()
             glVertex2f(center + k * space, yPos-2/_yscalingF);
             glVertex2f(center + k * space , yPos+2/_yscalingF);
             glEnd();
-         //   renderText (center + k * space ,yPos+15/_yscalingF , 0, QString::number(k)); TODO
+
+            qt_save_gl_state();
+            xrenderText(center + k * space ,yPos+15/_yscalingF, QString::number(k));
+            qt_restore_gl_state();
             k--;
         }
     }
@@ -579,4 +591,26 @@ void GLSpectrum::vIncrease()
 void GLSpectrum::vDecrease()
 {
     setScalingY(_yscalingF*(1.0-_scalingFactorY));
+}
+
+
+void GLSpectrum::xrenderText(double x, double y, const QString text)
+{
+//    glTranslatef(float(_shiftX),float(_shiftY),0);
+//    glScalef(_xscalingF,_yscalingF,0);
+    GLdouble textPosX = x, textPosY = y;
+    // Retrieve last OpenGL color to use as a font color
+    GLdouble glColor[4];
+    glGetDoublev(GL_CURRENT_COLOR, glColor);
+    QColor fontColor = QColor(glColor[0]*255, glColor[1]*255, glColor[2]*255, glColor[3]*255);
+    // Render text
+    QPainter painter(this);
+    painter.translate(float(_shiftX),float(_shiftY)); //This is for my own mouse event (scaling)
+    painter.scale(_xscalingF,_yscalingF);
+    painter.setPen(fontColor);
+    QFont f;
+    f.setPixelSize(10);
+    painter.setFont(f);
+    painter.drawText(textPosX, textPosY, text);
+    painter.end();
 }

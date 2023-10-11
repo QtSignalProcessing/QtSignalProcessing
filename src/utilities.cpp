@@ -1,33 +1,35 @@
 #include "utilities.h"
+#include "iir.h"
+#include "chebyshevfilter.h"
+
 #include <samplerate.h>
-#include "fftw3.h"
-#include<stdlib.h>
-#include<math.h>
-#include<iostream>
-#include"iir.h"
-#include"chebyshevfilter.h"
-#include <stdio.h>
-#include <QDebug>
+#include <fftw3.h>
+
+#include <cstdlib>
+#include <cmath>
+#include <iostream>
+//#include <stdio.h>
+//#include <QDebug>
 
 using namespace std;
 Utilities::Utilities( float* data,int number):bits(0),L(1),down(1),data(data),qData(NULL),
-    sampleData(NULL),filterData(NULL),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0),_butter(true),_NyqFreq(0),_order(3),_ripple(0.5),_factor(1.0)
+    sampleData(nullptr),filterData(nullptr),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0),_butter(true),_NyqFreq(0),_order(3),_ripple(0.5),_factor(1.0)
 {
 }
 
 Utilities::~Utilities()
 {
-    if( qData != NULL )
-        free(qData);
-    if( sampleData != NULL )
-        free(sampleData);
-    if( filterData != NULL )
-        free(filterData);
+    if(qData != nullptr)
+        delete[] qData;
+    if(sampleData != nullptr)
+        delete[] sampleData;
+    if(filterData != nullptr)
+        delete[] filterData;
 }
 
 float* Utilities::getQuantize()
 {
-    if((bits==0&&(down==1)&&(L==1))&&(bits == _trueBits))
+    if((bits == 0 && (down == 1) && (L == 1)) && (bits == _trueBits))
     {
         SNR=0;
         return data;
@@ -38,19 +40,19 @@ float* Utilities::getQuantize()
         return getSampleData(true);
     }
     currentNumItems=number*(float)L/down;
-    if(qData!=NULL)
-        free(qData);
-    qData=(float*)malloc(sizeof(float)*(currentNumItems));
+    if(qData != nullptr)
+        delete[] qData;
+    qData = new float[sizeof(float)*(currentNumItems)];
     float max = 1;
-    if((down==1)&&(L==1))
+    if((down == 1) && (L == 1))
     {
-        double num=pow(2,bits);
+        double num = pow(2,bits);
         float step=2*max/(float)num;
-        float* level = (float*)malloc(sizeof(float)*num);
+        QVector<float> level;
         for(int i=0;i<num;i++)
-          {
-              level[i]=-max+step*(float)i;
-          }
+        {
+            level.push_back(-max+step*(float)i);
+        }
         float index;
         for(int i=0;i<currentNumItems;i++)
         {
@@ -62,7 +64,6 @@ float* Utilities::getQuantize()
                 index=0;
             qData[i]=level[0]+(float)index*step;
         }
-        free(level);
         return qData;
     }
     int num=pow(2,bits);
@@ -70,19 +71,19 @@ float* Utilities::getQuantize()
 
     float level[num];
     for(int i=0;i<num;i++)
-      {
-          level[i]=  -max + step * (float)i;
-      }
-   float index;
-   float *computeData;
+    {
+        level[i]=  -max + step * (float)i;
+    }
+    float index;
+    float *computeData;
     if(down>=2)
-   {
+    {
        computeData=sampleData;
-   }
-   else
-   {
+    }
+    else
+    {
        computeData=filterData;
-   }
+    }
     int idx;
     for(int i=0;i<currentNumItems;i++)
     {
@@ -101,17 +102,17 @@ QVector<float> Utilities::getOrgQuan()
 {
     QVector<float> qdata;
     float max = 1;
-    double num=pow(2,bits);
-    float step=2*max/(float)num;
-    float* level = (float*)malloc(sizeof(float)*num);
-    for(int i=0;i<num;i++)
+    int num = pow(2,bits);
+    float step = 2 * max / (float)num;
+    float level[num];
+    for(int i = 0; i < num; i++)
     {
-          level[i]=-max+step*(float)i;
+        level[i]=-max+step*(float)i;
     }
     float index;
-    for(int i=0;i<number;i++)
+    for(int i = 0; i < number; i++)
     {
-        index=(data[i]-level[0])/step;
+        index = (data[i]-level[0])/step;
         index = qRound(index);
         if(index>(num-1))
             index=num-1;
@@ -119,7 +120,6 @@ QVector<float> Utilities::getOrgQuan()
             index=0;
         qdata.push_back(level[0]+(float)index*step);
     }
-    free(level);
     return qdata;
 }
 
@@ -158,7 +158,7 @@ double Utilities::computeError()
 {
     if(this->bits==0)
         return -1;
-    double *error=(double*)malloc(sizeof(double)*(currentNumItems));
+    double* error = new double[sizeof(double)*(currentNumItems)];
     float *computeData;
     if(down<2)
         computeData=data;
@@ -175,7 +175,7 @@ double Utilities::computeError()
     }
     varErr /= currentNumItems;
     varErr = sqrt( varErr );
-    free(error);
+    delete[] error;
     return varErr;
 }
 
@@ -188,9 +188,9 @@ double Utilities::getSNR(double varErr)
     }
     float *computeData;
     if(down<2)
-        computeData=data;
+        computeData = data;
     else
-        computeData=sampleData;
+        computeData = sampleData;
     double varOrg = 0;
 
     for(int i=0;i<currentNumItems;i++)
@@ -219,8 +219,8 @@ float Utilities::getMax1(float *a,int num)
 
 float* Utilities::getSampleData(bool org)
 {
-    if(sampleData!=NULL)
-        free(sampleData);
+    if(sampleData != nullptr)
+        delete[] sampleData;
     sampleData=(float*)malloc(sizeof(float)*currentNumItems);
     SRC_STATE	*src_state ;
     SRC_DATA	src_data ;
@@ -242,11 +242,9 @@ float* Utilities::getSampleData(bool org)
     src_data.src_ratio=(double)L/down;
     src_data.output_frames=currentNumItems;
     src_simple (&src_data,  4, 1) ;
-   // if(filtered)
-      //  return sampleData;
+
    if(bits != _trueBits)
     {
-       qDebug()<<"I am here";
         return getQuantize();
     }
     return sampleData;
@@ -277,7 +275,7 @@ const QVector<float> Utilities::getAmplitude(const QVector<float>& in)
 {
     fftw_complex *out;
     fftw_plan p;
-    double *orgIn=(double*)malloc(sizeof(double)*(in.size()));
+    double* orgIn = new double[sizeof(double)*(number)];
     for(int j=0;j<in.size();j++)
     {
         orgIn[j]=in[j];
@@ -300,7 +298,7 @@ const QVector<float> Utilities::getAmplitude(const QVector<float>& in)
         imag=out[j][1];
         amplitude.push_back(sqrt(real*real+imag*imag));
     }
-    free(orgIn);
+    delete[] orgIn;
     fftw_destroy_plan(p);
     fftw_free(out);
     return amplitude;
@@ -309,7 +307,7 @@ const QVector<float> Utilities::getAmplitude()
 {
     fftw_complex *out;
     fftw_plan p;
-    double *orgIn=(double*)malloc(sizeof(double)*(number));
+    double* orgIn = new double[sizeof(double)*(number)];
     for(int j=0;j<number;j++)
     {
         orgIn[j]=data[j];
@@ -331,7 +329,7 @@ const QVector<float> Utilities::getAmplitude()
         imag=out[j][1];
         amplitude.push_back(sqrt(real*real+imag*imag));
     }
-    free(orgIn);
+    delete[] orgIn;
     fftw_destroy_plan(p);
     fftw_free(out);
     return amplitude;
@@ -340,25 +338,24 @@ const QVector<float> Utilities::getAmplitude()
 QVector<float> Utilities::getFilterData()
 {
     QVector<float> tmp;
-   // double factor = (double)L/down/2;
     if(_ripple <= 0 || _order >15)
         return tmp;
 
-    if(filterData!=NULL)
-        free(filterData);
-    filterData=(float*)malloc(number*sizeof(float));
+    if(filterData != nullptr)
+        delete[] filterData;
+
+    filterData = new float[number*sizeof(float)];
     for(int i=0;i<number;i++)
-        filterData[i]=0;
-    double* b1=(double*)malloc((_order+1)*sizeof(double));
-    double* a1=(double*)malloc((_order+1)*sizeof(double));
+        filterData[i]=0; 
+    QVector<double> b1, a1;
     if(_butter)
     {
         IIR* iir=new IIR(0,_order,_factor,0,0);
-        qDebug()<<_factor;
+
         for(int i=0;i<=_order;i++)
         {
-            b1[i]=iir->b[i];
-            a1[i]=iir->a[i];
+            b1.push_back(iir->b[i]);
+            a1.push_back(iir->a[i]);
         }
         delete iir;
     }
@@ -391,8 +388,7 @@ QVector<float> Utilities::getFilterData()
         for (j=0;j<_order;j++)
         filterData[i]=filterData[i]-a1[j+1]*filterData[i-j-1];
     }
-    free(a1);
-    free(b1);
+
     if(fabs(getMax1(filterData,number))>3)
     {
         for(int i = 0;i < number; i++)
@@ -432,4 +428,16 @@ void Utilities::setNyqFreq(double s)
 double Utilities::getNyq()
 {
     return _NyqFreq;
+}
+
+
+int gcd(int v1,int v2)
+{
+    while(v2)
+    {
+        int temp=v2;
+        v2=v1%v2;
+        v1=temp;
+    }
+    return v1;
 }

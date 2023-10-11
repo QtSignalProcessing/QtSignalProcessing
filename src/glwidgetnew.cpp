@@ -1,4 +1,5 @@
 #include "glwidgetnew.h"
+#include "utilities.h"
 
 //#include <QGLWidget> qt4
 #include <QOpenGLWidget>
@@ -7,6 +8,7 @@
 #include <QApplication>
 #include <QSize>
 #include <QPainter>
+#include <QPaintEngine>
 
 #include <math.h>
 
@@ -49,6 +51,7 @@ GLWidgetnew::GLWidgetnew(const QVector<float>&data,float time,bool isSample,QWid
     _Xmax = _data.size();
     _Ymax = getMax()*10;
     _Ymin = -getMax()*10;
+
 }
 
 void GLWidgetnew::paintGL()
@@ -76,8 +79,8 @@ void GLWidgetnew::paintGL()
     drawAxis();
     glTranslatef(float(_shiftX),float(_shiftY),0);
     glScalef(_xscalingF,_yscalingF,0);
-    yLabel();
-    xLabel();
+  //  yLabel();
+   // xLabel();
     if(!_isSample)
     {
         glBegin(GL_LINE_STRIP);
@@ -103,7 +106,7 @@ void GLWidgetnew::paintGL()
                 for(int ii = 0; ii < 8; ii++)
                 {
                     float theta = 2.0f * 3.1415926f * float(ii) / float(8);//get the current angle
-                    float r = 8;
+                    float r = 5;
                     float x = r * cosf(theta)/(_xscalingF*(1.0+_scalingFactorX));//calculate the x component
                     float y = r * sinf(theta);//calculate the y component
                     glVertex2f(x + cx, y + cy);//output vertex
@@ -119,9 +122,11 @@ void GLWidgetnew::paintGL()
             }
         }
     }
+    yLabel();
+    xLabel();
     glPopMatrix();
-   // yLabel();
-    //xLabel();
+
+
 }
 
 
@@ -157,6 +162,7 @@ void GLWidgetnew::initializeGL()
     glViewport(0,0, _width, _height);
     glMatrixMode (GL_MODELVIEW);
     glLoadIdentity();
+
 }
 void GLWidgetnew::resizeGL(int width, int height)
 {
@@ -378,7 +384,10 @@ void GLWidgetnew::yLabel(int offset)
         grid = pow(10,i/3)*S[i%3];
     }
     _yGrid = grid;
+
     glScalef(1.0/_xscalingF,1.0/_yscalingF,0);
+
+
 
     //draw y-grid
 
@@ -390,14 +399,20 @@ void GLWidgetnew::yLabel(int offset)
 
         if(yPos < (_Ymax-_Ymin)*_yscaleF-_shiftY+1)
         {
+
             glBegin(GL_LINES);
             glVertex2f(xPos-4, yPos);
             glVertex2f(xPos+4, yPos);
             glEnd();
-        // renderText (xPos - offset,yPos+5 , 0, QString::number(i/10.0)); TODO
+            qt_save_gl_state();
+            renderText(xPos - offset,yPos+5 , QString::number(i/10.0));
+            qt_restore_gl_state();
+
         }
     }
     glScalef(_xscalingF,_yscalingF,0);
+  //  QPainter p(this);
+
 }
 
 void GLWidgetnew::xLabel()
@@ -448,7 +463,10 @@ void GLWidgetnew::xLabel()
         glEnd();
       //  if(((xPos > -_shiftX - _xmin*_xscaleF + 10) &&(xPos < _Xmax*_xscaleF -_shiftX - _xmin*_xscaleF + 10 )) || (i == 0 && _shiftX == 0)  )
 
-      //  renderText (xPos - 10,yPos+15 , QString::number(k*_step,'f',digit));
+        //renderText (xPos - 10,yPos+15 , QString::number(k*_step,'f',digit));
+        qt_save_gl_state();
+        renderText (xPos - 10,yPos+15 , QString::number(k*_step,'f',digit));
+        qt_restore_gl_state();
 
         k++;
       }
@@ -503,25 +521,54 @@ void GLWidgetnew::setTime(float time)
     _time = time;
 }
 
-void GLWidgetnew::renderText(double x, double y, double z, const QString text)
+void GLWidgetnew::renderText(double x, double y, const QString text)
 {
-    // Identify x and y locations to render text within widget
-    int height = this->height();
-    GLdouble textPosX = x, textPosY = y, textPosZ = z;
-
-    textPosY = height - textPosY; // y is inverted
-
+    GLdouble textPosX = x, textPosY = y;
     // Retrieve last OpenGL color to use as a font color
     GLdouble glColor[4];
     glGetDoublev(GL_CURRENT_COLOR, glColor);
-    QColor fontColor = QColor(glColor[0], glColor[1], glColor[2], glColor[3]);
-
+    QColor fontColor = QColor(glColor[0]*255, glColor[1]*255, glColor[2]*255, glColor[3]*255);
     // Render text
     QPainter painter(this);
+    painter.translate(float(_shiftX),float(_shiftY)); //This is for my own mouse event (scaling)
     painter.setPen(fontColor);
     QFont f;
     f.setPixelSize(10);
     painter.setFont(f);
     painter.drawText(textPosX, textPosY, text);
     painter.end();
+}
+
+
+void GLWidgetnew::qt_save_gl_state()
+{
+    glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+
+    glShadeModel(GL_FLAT);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void GLWidgetnew::qt_restore_gl_state()
+{
+    glMatrixMode(GL_TEXTURE);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glPopAttrib();
+    glPopClientAttrib();
 }

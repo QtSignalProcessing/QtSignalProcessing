@@ -18,6 +18,7 @@ protected:
     void paintGL();
     void yLabel();
     void xLabel();
+    void xrenderText(double x, double y, const QString text);
 
 public slots:
     void show1Period(bool i);

@@ -91,7 +91,6 @@ signals:
       int sr;
       float time;
       int num;
-      int gcd(int v1,int v2);
       void aafilter();
    //   void getFilterdata();
       void initializeVar();
