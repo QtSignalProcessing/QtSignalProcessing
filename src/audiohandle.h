@@ -6,6 +6,7 @@
 #include<stdlib.h>
 #include<QString>
 #include<QDir>
+
 class AudioHandle
 {
 public:
@@ -16,13 +17,11 @@ public:
     int getFrameNum();
     int getSamplerate();
     int getChannel();
-    float* getData(int num_items,int &num);
+    QList<float> getData(int num_items,int &num);
     void writeToWave(float* data, char* filename,float sr,int size);
-    float* triangularMagnitude(float* data,int size);
+    QList<float> triangularMagnitude(QList<float> data,int size);
 private:
-    float *buf1;
-    int frame,samplerate,channel;
-    float* _triangularWave;
+    QList<float> _triangular_wave;
 };
 
 #endif // READINAUDIO_H

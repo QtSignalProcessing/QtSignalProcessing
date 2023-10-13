@@ -345,7 +345,7 @@ void GLWidgetnew::drawAxis()
     glEnd();
 }
 
-void GLWidgetnew::setData(const QVector<float>&data)
+void GLWidgetnew::setData(const QList<float>&data)
 {
     _data = data;
     update();

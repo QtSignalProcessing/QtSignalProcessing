@@ -11,7 +11,7 @@
 #include <QCloseEvent>
 #include <QDebug>
 
-plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QVector<float>& specdata,QWidget *parent) :
+plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QList<float>& specdata,QWidget *parent) :
     QWidget(parent)
 {
     this->sr=sr;
@@ -21,7 +21,7 @@ plotFilter::plotFilter(float *ria,int num,bool discrete,int sr,QVector<float>& s
     name->setText("Anti-aliasing filter");
     name->setFont(font);
     float  time=(float)num/sr;
-    QVector<float> datapt;
+    QList<float> datapt;
     for( int i = 0; i < num; i++ )
         datapt.push_back(ria[i]);
 
