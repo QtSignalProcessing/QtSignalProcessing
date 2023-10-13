@@ -30,8 +30,8 @@
 #endif
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),_data(nullptr),_quantizedData(nullptr),bits(0),tmpData(nullptr),ifShowAlias(false),
-     _trueBits(0),_selFilter(nullptr),_showAliasing(nullptr),_showSampleRange(nullptr),_showOnePeriod(nullptr),loadingFailed(false),_orgData(nullptr),
+    : QMainWindow(parent),bits(0),tmpData(nullptr),ifShowAlias(false),
+     _trueBits(0),_selFilter(nullptr),_showAliasing(nullptr),_showSampleRange(nullptr),_showOnePeriod(nullptr),loadingFailed(false),
       _orgFileName(),_sampleFileName(),_filteredFileName(),_samplingRates(),_filterData(),_sampleData()
 {
     createActions();
@@ -56,44 +56,48 @@ void MainWindow::initializeVar()
     int c=ria->getChannel();
     int num_items = f*c;
     time=(float)num_items/sr;
-    if(_data != nullptr)
-        delete[] _data;
-    _data=ria->getData(num_items,num);
-    if(_data)
+
+    if(_audio_data.size() != 0)
+        _audio_data.clear();
+
+    _audio_data = ria->getData(num_items,num);
+    if(_audio_data.size() != 0)
     {
-        _sampleData.currentNum = num;
+        _sampleData.current_num = num;
         loadingFailed = false;
-        if(_orgData!=nullptr)
-            delete _orgData;
-        _orgData = new float[num*sizeof(float)];
+        if(_org_data.size() != 0)
+            _org_data.clear();
+        _org_data.resize(num);
         for(int i =0; i < num; i++)
         {
-            _orgData[i] =_data[i] ;
+            _org_data[i] =_audio_data[i] ;
         }
     }
     else
     {
         num = 20000;
-        _sampleData.currentNum=num;
-        _data = new float[sizeof(float)*num];
+        _sampleData.current_num = num;
+
+        _audio_data.resize(num);
         sr = 11025;
         for(int i = 0; i< 20000;i++)
-            _data[i] = (sin(i*3.14/2));
-        _orgData = new float[sizeof(float)*num];
+            _audio_data[i] = (sin(i*3.14/8));
+
+        _org_data.resize(num);
         for(int i =0; i < num; i++)
-            _orgData[i] =_data[i] ;
+            _org_data[i] =_audio_data[i] ;
         loadingFailed = true;
         _orgFileName=QDir::tempPath()+"/tmp.wav";
-        ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
+        ria->writeToWave(_audio_data.data(),_orgFileName.toLatin1().data(),sr,num);
     }
 }
 
 void MainWindow::createWidget(QWidget *main)
 {
      initializeVar();
-    utilities=new Utilities(_data,num);
-    _SampledWave=new PlotWidget(_data,num,time,true,main);
-    _OrgWave=new PlotWidget(_data,num,time,false,main);
+    utilities=new Utilities(_audio_data,num);
+    _SampledWave=new PlotWidget(_audio_data.data(),num,time,true,main);
+    _OrgWave=new PlotWidget(_audio_data.data(),num,time,false,main);
     QVector<float> spec = utilities->getAmplitude();
     _ConSpec=new PlotWidget(spec,false,sr,main);
     _DisSpec=new PlotWidget(spec,true,sr,main);
@@ -267,9 +271,8 @@ void MainWindow::createWidget(QWidget *main)
     connect(_SampledWave->getWaveWidget(),SIGNAL(newSNR(double)),SNR,SLOT(setNum(double)));
     rightWidget->setLayout(vLayout);
     ConpLayout->addWidget(rightWidget,2,3);
-    _FilterWidget=new plotFilter(_data,num,false,sr,spec,0);
+    _FilterWidget=new plotFilter(_audio_data.data(),num,false,sr,spec,0);
     _FilterWidget->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
-   // connect(sampleRateSelect,SIGNAL(currentIndexChanged(QString)),_FilterWidget,SLOT(setComboText(QString))); //TODO
     connect(sampleRateSelect,SIGNAL(currentTextChanged(QString)),_FilterWidget,SLOT(setComboText(QString)));
     _FilterWidget->hide();
     connect(_FilterWidget->play,SIGNAL(clicked()),this,SLOT(playfiltered()));
@@ -279,7 +282,6 @@ void MainWindow::createWidget(QWidget *main)
     connect(_FilterWidget->getRippleEdit(),SIGNAL(textEdited(QString)),this,SLOT(setRipple(QString)));
     connect(_FilterWidget->getSetTonyqB(),SIGNAL(clicked()),this,SLOT(setNyqFreq()));
     connect(_FilterWidget->getApplyButton(),SIGNAL(clicked()),this,SLOT(applyFilters()));
-  //  connect(_FilterWidget->getCutFreq(),SIGNAL(currentIndexChanged(QString)),this,SLOT(setFactor(QString)));// TODO
     connect(_FilterWidget->getCutFreq(),SIGNAL(currentTextChanged(QString)),this,SLOT(setFactor(QString)));
 }
 
@@ -436,7 +438,7 @@ void MainWindow::loadFile(const QString &fileName)
     sampleRateSelect->clear();
     sampleRateSelect->addItems(texts);
     sampleRateSelect->blockSignals(false);
-    QVector<float> dpt = pointer2Qvec(_data,num);
+    QList<float> dpt(_audio_data);
     _OrgWave->getWaveWidget()->setTime(time);
     _OrgWave->getWaveWidget()->setData(dpt);
     _OrgWave->getWaveWidget()->updateMax();
@@ -448,7 +450,7 @@ void MainWindow::loadFile(const QString &fileName)
     _SampledWave->getWaveWidget()->setOffset(1);
     _SampledWave->getWaveWidget()->resetH();
 
-    QVector<float> tmps = utilities->getAmplitude(dpt);
+    QList<float> tmps = utilities->getAmplitude(dpt);
     _ConSpec->getSpecWidget()->setData(tmps);
     _ConSpec->getSpecWidget()->updateMax();
     _ConSpec->getSpecWidget()->setRatio(1.0);
@@ -474,14 +476,14 @@ void MainWindow::loadFile(const QString &fileName)
     _FilterWidget->getSpecWidget()->setRatio(1.0);
     _FilterWidget->getSpecWidget()->updateSampleRate(sr);
     updateFilter();
-    utilities->updateUtilites(_data,num);
+    utilities->updateUtilites(_audio_data,num);
     if(loadingFailed)
     {
        _trueBits = 16;
     }
     else
     {
-    _trueBits = utilities->computeTrueBits();
+        _trueBits = utilities->computeTrueBits();
     }
     bitBox->setMaximum(_trueBits);
     bitBox->setValue(_trueBits);
@@ -552,9 +554,7 @@ void MainWindow::plot2Freq()
         conFirst->setDisabled(false);
         disFirst->setDisabled(false);
         conFirst->setChecked(true);
-        QVector<float> tmpw = pointer2Qvec(_data,num);
-        QVector<float> tmps = utilities->getAmplitude(tmpw);
-        _DisSpec->getSpecWidget()->setDataFor2Freq(tmps);
+        _DisSpec->getSpecWidget()->setDataFor2Freq(utilities->getAmplitude(_audio_data));
         _DisSpec->getSpecWidget()->conDis(true);
         onlyCon();
     }
@@ -588,26 +588,19 @@ void MainWindow::showFilter(bool i)
     else
     {
         _FilterWidget->hide();
-        QVector<float> tmp = pointer2Qvec(_data,num);
-        _FilterWidget->getWaveWidget()->setData(tmp);
+        _FilterWidget->getWaveWidget()->setData(_audio_data);
         if(_sampleData.upSampleFactor==1 && _sampleData.downSampleFactor ==1)
         {
-            _sampleData.sampleData = _data;
+            _sampleData.sample_data = _audio_data;
         }
         else
         {
-            _sampleData.sampleData = utilities->getSampleData(true);
+            _sampleData.sample_data = utilities->getSampleData(true);
         }
         _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-        ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
-
-        QVector<float> dpt;
-        float* tmpd = _sampleData.sampleData;
-        for( int i = 0; i < _sampleData.currentNum; i++ )
-            dpt.push_back(tmpd[i]);
-        _SampledWave->getWaveWidget()->setData(tmp);
-        QVector<float> tmps = utilities->getAmplitude(dpt);
-        _DisSpec->getSpecWidget()->setData(tmps);
+        ria->writeToWave(_sampleData.sample_data.data(),_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.current_num);
+        _SampledWave->getWaveWidget()->setData(_audio_data);
+        _DisSpec->getSpecWidget()->setData(utilities->getAmplitude(_sampleData.sample_data));
         _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
         _selFilter->setChecked(false);
     }
@@ -630,19 +623,14 @@ void MainWindow::nonIntSr(int s)
         _sampleData.upSampleFactor= nums/Gcd;
         _sampleData.downSampleFactor = sr/Gcd;
     }
-    _sampleData.currentNum=num*_sampleData.upSampleFactor/_sampleData.downSampleFactor;
-    utilities->setSampleFactor(_sampleData.upSampleFactor,_sampleData.downSampleFactor,_sampleData.currentNum);
-    _sampleData.sampleData = utilities->getSampleData(!_selFilter->isChecked());
+    _sampleData.current_num = num*_sampleData.upSampleFactor/_sampleData.downSampleFactor;
+    utilities->setSampleFactor(_sampleData.upSampleFactor,_sampleData.downSampleFactor,_sampleData.current_num);
+    _sampleData.sample_data = utilities->getSampleData(!_selFilter->isChecked());
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),nums,_sampleData.currentNum);
-    QVector<float> dpt;
-    float* tmpd = _sampleData.sampleData;
-    for( int i = 0; i < _sampleData.currentNum; i++ )
-        dpt.push_back(tmpd[i]);
+    ria->writeToWave(_sampleData.sample_data.data(),_sampleFileName.toLatin1().data(),nums,_sampleData.current_num);
     int step = _sampleData.downSampleFactor/_sampleData.upSampleFactor;
     _SampledWave->getWaveWidget()->setOffset(step);
-    QVector<float> tmps = utilities->getAmplitude(dpt);
-    _DisSpec->getSpecWidget()->setData(tmps);
+    _DisSpec->getSpecWidget()->setData(utilities->getAmplitude(_sampleData.sample_data));
     _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
     _ConSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
     utilities->setFactor((float)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
@@ -651,7 +639,7 @@ void MainWindow::nonIntSr(int s)
 
 void MainWindow::applyFilters()
 {
-    QVector<float> filterdata = utilities->getFilterData();
+    QList<float> filterdata = utilities->getFilterData();
     _filteredFileName = QDir::tempPath()+"/tmp2.wav";
     ria->writeToWave(filterdata.data(),_filteredFileName.toLatin1().data(),sr,num);
     if(_sampleData.upSampleFactor==1&&_sampleData.downSampleFactor==1)
@@ -662,19 +650,14 @@ void MainWindow::applyFilters()
     {
         utilities->setOnlyFiltered(false);
     }
-    _sampleData.sampleData = utilities->getSampleData(false);
+    _sampleData.sample_data = utilities->getSampleData(false);
     _FilterWidget->getWaveWidget()->setData(filterdata);
-    QVector<float> tmp = utilities->getAmplitude(filterdata);
+    QList<float> tmp = utilities->getAmplitude(filterdata);
     _FilterWidget->getSpecWidget()->setData(tmp);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
-    QVector<float> dpt;
-    float* tmpd = _sampleData.sampleData;
-    for( int i = 0; i < _sampleData.currentNum; i++ )
-        dpt.push_back(tmpd[i]);
-     _SampledWave->getWaveWidget()->setData(filterdata);
-    QVector<float> tmps = utilities->getAmplitude(dpt);
-    _DisSpec->getSpecWidget()->setData(tmps);
+    ria->writeToWave(_sampleData.sample_data.data(),_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.current_num);
+    _SampledWave->getWaveWidget()->setData(filterdata);
+    _DisSpec->getSpecWidget()->setData(utilities->getAmplitude(_sampleData.sample_data));
     _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
 }
 
@@ -682,14 +665,12 @@ void MainWindow::setBits(int bits)
 {
     this->bits = bits;
     utilities->setBit(bits);
-    _quantizedData = utilities->getQuantize();
-    QVector<float> dpt = pointer2Qvec(_quantizedData,_sampleData.currentNum);
+    _quantized_data = utilities->getQuantize();
     _SampledWave->getWaveWidget()->setData(utilities->getOrgQuan());
-     _SampledWave->getWaveWidget()->update();
-    QVector<float> tmps = utilities->getAmplitude(dpt);
-    _DisSpec->getSpecWidget()->setData(tmps);
+    _SampledWave->getWaveWidget()->update();
+    _DisSpec->getSpecWidget()->setData(utilities->getAmplitude(_quantized_data));
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(_quantizedData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
+    ria->writeToWave(_quantized_data.data(),_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.current_num);
     if(bits >= _trueBits)
     {
         SNR->setText("inf");
@@ -722,7 +703,7 @@ void MainWindow::displayAliasing(bool i)
 {
     if(i)
     {
-        QVector<float> tmpw = pointer2Qvec(_data,num);
+        QVector<float> tmpw = pointer2Qvec(_audio_data.data(),num);
         QVector<float> tmps = utilities->getAmplitude(tmpw);
         _DisSpec->getSpecWidget()->setDataForAliasing(tmps);
     }
@@ -741,20 +722,16 @@ void MainWindow::enableNoiseSelect(bool i)
     if(!i)
     {
         for(int i =0; i < num; i++)
-            _data[i] =_orgData[i];
-        utilities->updateUtilites(_data,num);
+            _audio_data[i] =_org_data[i];
+        utilities->updateUtilites(_audio_data,num);
         _orgFileName=QDir::tempPath()+"/tmp.wav";
-        ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
-        QVector<float> tmpw = pointer2Qvec(_data,num);
-        QVector<float> tmps = utilities->getAmplitude(tmpw);
-        _ConSpec->getSpecWidget()->setData(tmps);
-     //   _ConSpec->getSpecWidget()->updateMax();
-        _SampledWave->getWaveWidget()->setData(tmpw);
-        _OrgWave->getWaveWidget()->setData(tmpw);
+        ria->writeToWave(_audio_data.data(),_orgFileName.toLatin1().data(),sr,num);
+        _ConSpec->getSpecWidget()->setData(utilities->getAmplitude(_audio_data));
+        _SampledWave->getWaveWidget()->setData(_audio_data);
+        _OrgWave->getWaveWidget()->setData(_audio_data);
         _OrgWave->getWaveWidget()->updateMax();
         _SampledWave->getWaveWidget()->updateMax();
         nonIntSr(sampleRateSelect->currentIndex());
-        //_DisSpec->getSpecWidget()->updateMax();
     }
 }
 
@@ -776,30 +753,28 @@ void MainWindow::noiseAddfunc(int index)
     if(loadingFailed)
     {
         for(int i =0; i < num; i++)
-            _data[i] =(_orgData[i] + (float)sin(freq*i)/10.0)/1.1;
+            _audio_data[i] =(_org_data[i] + (float)sin(freq*i)/10.0)/1.1;
     }
     else
     {
         for(int i =0; i < num; i++)
-            _data[i] =(_orgData[i] + (float)sin(freq*i)/10.0)/1.1;
+            _audio_data[i] =(_org_data[i] + (float)sin(freq*i)/10.0)/1.1;
     }
-    utilities->updateUtilites(_data,num);
+    utilities->updateUtilites(_audio_data,num);
     _orgFileName=QDir::tempPath()+"/tmp.wav";
     _sampleFileName = _orgFileName;
 
-    ria->writeToWave(_data,_orgFileName.toLatin1().data(),sr,num);
+    ria->writeToWave(_audio_data.data(),_orgFileName.toLatin1().data(),sr,num);
      nonIntSr(sampleRateSelect->currentIndex());
-     QVector<float> tmpw = pointer2Qvec(_data,num);
-     QVector<float> tmps = utilities->getAmplitude(tmpw);
-     _ConSpec->getSpecWidget()->setData(tmps);
-     _SampledWave->getWaveWidget()->setData(tmpw);
-     _OrgWave->getWaveWidget()->setData(tmpw);
+     _ConSpec->getSpecWidget()->setData(utilities->getAmplitude(_audio_data));
+     _SampledWave->getWaveWidget()->setData(_audio_data);
+     _OrgWave->getWaveWidget()->setData(_audio_data);
      nonIntSr(sampleRateSelect->currentIndex());
 }
 
-QVector<float> MainWindow::pointer2Qvec(float *data,int size)
+QList<float> MainWindow::pointer2Qvec(float *data,int size)
 {
-    QVector<float> tmp;
+    QList<float> tmp;
     for( int i = 0; i < size; i++ )
         tmp.push_back(data[i]);
     return tmp;
@@ -851,21 +826,16 @@ void MainWindow::setRipple(QString ripple)
 
 void MainWindow::setFilterDataToWidgets()
 {
-    QVector<float> filterdata = utilities->getFilterData();
+    QList<float> filterdata = utilities->getFilterData();
     _FilterWidget->getWaveWidget()->setData(filterdata);
     _FilterWidget->show();
-    QVector<float> amt = utilities->getAmplitude(filterdata);
+    QList<float> amt = utilities->getAmplitude(filterdata);
     _FilterWidget->getSpecWidget()->setData(amt);
-    _sampleData.sampleData = utilities->getSampleData(false);
+    _sampleData.sample_data = utilities->getSampleData(false);
     _sampleFileName = QDir::tempPath()+"/tmp1.wav";
-    ria->writeToWave(_sampleData.sampleData,_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.currentNum);
-    QVector<float> dpt;
-    float* tmpd = _sampleData.sampleData;
-    for( int i = 0; i < _sampleData.currentNum; i++ )
-        dpt.push_back(tmpd[i]);
-     _SampledWave->getWaveWidget()->setData(filterdata);
-    QVector<float> tmps = utilities->getAmplitude(dpt);
-    _DisSpec->getSpecWidget()->setData(tmps);
+    ria->writeToWave(_sampleData.sample_data.data(),_sampleFileName.toLatin1().data(),sr*_sampleData.upSampleFactor/_sampleData.downSampleFactor,_sampleData.current_num);
+    _SampledWave->getWaveWidget()->setData(filterdata);
+    _DisSpec->getSpecWidget()->setData(utilities->getAmplitude(_sampleData.sample_data));
     _DisSpec->getSpecWidget()->setRatio((double)_sampleData.upSampleFactor/_sampleData.downSampleFactor);
 }
 

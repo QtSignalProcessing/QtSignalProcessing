@@ -7,12 +7,12 @@ class GLSpectrum : public GLWidgetnew
 {
     Q_OBJECT
 public:
-    GLSpectrum(const QVector<float>&data,bool isSample,double ratio,int sampleRate,QWidget* parent=0);
+    GLSpectrum(const QList<float>& data,bool is_sample,double ratio,int sample_rate,QWidget* parent=0);
     void setRatio(double ratio);
     void updateY();
-    void setDataForAliasing(QVector<float>& data);
-    void setDataFor2Freq(QVector<float>& data);
-    void updateSampleRate(int sampleRate);
+    void setDataForAliasing(QList<float>& data);
+    void setDataFor2Freq(const QList<float>& data);
+    void updateSampleRate(int sample_rate);
 
 protected:
     void paintGL();
@@ -34,10 +34,10 @@ private:
     double _ratio;
     bool _onePeriod;
     bool _showAliasing;
-    QVector<float> _dataForAliaing;
+    QList<float> _dataForAliaing;
     bool _showRange;
     double _rangeRatio;
-    QVector<float> _dataFor2Freq;
+    QList<float> _dataFor2Freq;
     bool _plot2Freq;
     bool _conFirst;
     int _sampleRate;
@@ -45,7 +45,7 @@ private:
 
     void setScalingX(double scale);
     void setScalingY(double scale);
-    void plotdata(const QVector<float>data);
+    void plotdata(const QList<float>data);
     void plotRange();
     void plot2Freq();
 };

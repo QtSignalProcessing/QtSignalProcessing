@@ -5,20 +5,20 @@
 
 
 using namespace std;
-AudioHandle::AudioHandle(const QString& s):buf1(NULL) ,_triangularWave(NULL)//(const QString& s)
+AudioHandle::AudioHandle(const QString& s)
 {
     info.format = 0;
-   sf = sf_open(s.toStdString().c_str(),SFM_READ,&info); //(s.toSdtString().c_str())
-   if (sf == NULL)
-   {
-       cout<<"Failed to open the file. "<<sf_strerror(sf)<<" "<<sf_error(sf)<<endl;
-       info.channels = 1;
-       info.frames = 20000;
-       info.samplerate = 11025;
-       info.format = 65541;
-       info.sections = 1;
-       info.seekable =1;
-   }
+    sf = sf_open(s.toStdString().c_str(),SFM_READ,&info);
+    if (sf == NULL)
+    {
+        cout<<"Failed to open the file. "<<sf_strerror(sf)<<" "<<sf_error(sf)<<endl;
+        info.channels = 1;
+        info.frames = 20000;
+        info.samplerate = 11025;
+        info.format = 65541;
+        info.sections = 1;
+        info.seekable =1;
+    }
 }
 
 AudioHandle::~AudioHandle(){}
@@ -38,22 +38,16 @@ int AudioHandle::getChannel()
     return info.channels;
 }
 
-float* AudioHandle::getData(int num_items,int& num)
+QList<float> AudioHandle::getData(int num_items,int& num)
 {
-    if(buf1 != nullptr)
-        //free(buf1);
-       delete[] buf1;
-    //buf1=(float *)malloc(num_items*sizeof(float));
-    buf1 = new float[num_items*sizeof(float)];
+    QList<float> data(num_items);
     if(sf == nullptr)
     {
-        //free(buf1);
-       delete[] buf1;
         num = 20000;
-        return nullptr;
+        return {};
     }
-    num=sf_readf_float(sf,buf1,num_items);
-    return buf1;
+    num=sf_readf_float(sf,data.data(),num_items);
+    return data;
 }
 
 void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
@@ -72,7 +66,7 @@ void AudioHandle::writeToWave(float *data, char *filename,float sr,int size)
     sf_close(outfile);
 }
 
-float* AudioHandle::triangularMagnitude(float *data,int size)
+QList<float> AudioHandle::triangularMagnitude(QList<float> data,int size)
 {
     fftw_complex *out;
     fftw_plan p;
@@ -101,10 +95,10 @@ float* AudioHandle::triangularMagnitude(float *data,int size)
         out[size-j][0] =real;
         out[size-j][1] = imag;
     }
-    if(_triangularWave != NULL)
-        free(_triangularWave);
 
-    _triangularWave = (float*)malloc(sizeof(float)*size);
+    if(_triangular_wave.size() != 0)
+        _triangular_wave.clear();
+    _triangular_wave.resize(size);
 
     fftw_complex * in1 = (fftw_complex*)malloc(sizeof(fftw_complex)*size);
 
@@ -115,9 +109,9 @@ float* AudioHandle::triangularMagnitude(float *data,int size)
     fftw_free(out);
     for(int i = 0;i<size/2;i++)
     {
-        _triangularWave[i] = in1[size/2-i][0];
-        _triangularWave[size -i-1]=in1[size/2-i][0];
+        _triangular_wave[i] = in1[size/2-i][0];
+        _triangular_wave[size -i-1]=in1[size/2-i][0];
     }
     free(in1);
-    return _triangularWave;
+    return _triangular_wave;
 }

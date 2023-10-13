@@ -9,46 +9,47 @@ int gcd(int v1,int v2);
 class Utilities
 {
 public:
-    Utilities( float* data,int number);
+    Utilities(QList<float>& data,int number);
     ~Utilities();
     void setBit(int bits);
     void setSampleFactor(int L,int down,int currentNumItems);
-    float* getQuantize();
+    //float* getQuantize();
+    QList<float> getQuantize();
     double computeError();
     double getSNR(double varErr);
     void setReplace(bool replace);
-    float* getSampleData(bool org);
-    void setFilterData(float* filterData);
-    void updateUtilites(float* data,int number);
+    QList<float> getSampleData(bool org);
+    void setFilterData(QList<float>);
+    void updateUtilites(QList<float>,int number);
     int computeTrueBits();
     void setOnlyFiltered(bool onlyFiltered);
-    const QVector<float> getAmplitude(const QVector<float>& in);
-    const QVector<float> getAmplitude();
+    const QList<float> getAmplitude(const QList<float>& in);
+    const QList<float> getAmplitude();
     void setOrder(int order);
-    QVector<float> getFilterData();
+    QList<float> getFilterData();
     void setNyqFreq(double s);
     void butterOrCheby(bool i);
     void setRipple(float ripple);
     void setCutofFreq(QString s);
     void setFactor(float factor);
     double getNyq();
-    QVector<float> getOrgQuan();
+    QList<float> getOrgQuan();
 
 
 private:
     int bits;
     int L;
     int down;
-    float* data;
-    float* qData;
-    float* sampleData;
-    float* filterData;
+    QList<float> data;
+    QList<float> qData;
+    QList<float> sampleData;
+    QList<float> filterData;
     float SNR;
     int number;
     int currentNumItems;
     bool replace;
     bool filtered;
-    float getMax1(float *a,int num);
+    float getMax1(const QList<float>&,int num);
     int _trueBits;
     bool _butter;
     double _NyqFreq; //cutoff freq propotional to the Nyquist rate to avoid aliasing

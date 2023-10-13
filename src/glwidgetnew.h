@@ -3,14 +3,15 @@
 
 //#include <QGLWidget>
 #include <QOpenGLWidget>
-#include <QOpenGLFramebufferObject>
+
+//#include <QOpenGLFramebufferObject>
 
 class GLWidgetnew : public QOpenGLWidget
 {
     Q_OBJECT
 public:
-    GLWidgetnew(const QVector<float>&data,float time,bool isSample,QWidget* parent=0);
-    void setData(const QVector<float>&data);
+    GLWidgetnew(const QList<float>&data,float time,bool isSample,QWidget* parent=0);
+    void setData(const QList<float>& data);
     void updateMax();
     float getMax();
     void setOffset(int offset);
@@ -76,7 +77,7 @@ protected:
     double _Ymin;
     int _xGrid;
     int _yGrid;
-    QVector<float> _data;
+    QList<float> _data;
     float _step;
     int _height;
     int _width;

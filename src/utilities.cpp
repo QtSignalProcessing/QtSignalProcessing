@@ -9,25 +9,17 @@
 #include <cmath>
 #include <iostream>
 //#include <stdio.h>
-//#include <QDebug>
+#include <QDebug>
 
 using namespace std;
-Utilities::Utilities( float* data,int number):bits(0),L(1),down(1),data(data),qData(NULL),
-    sampleData(nullptr),filterData(nullptr),SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0),_butter(true),_NyqFreq(0),_order(3),_ripple(0.5),_factor(1.0)
+Utilities::Utilities(QList<float>& data,int number):bits(0),L(1),down(1), data(data),
+    SNR(0),number(number),currentNumItems(number),replace(false),filtered(false),_trueBits(0),_butter(true),_NyqFreq(0),_order(3),_ripple(0.5),_factor(1.0)
 {
 }
 
-Utilities::~Utilities()
-{
-    if(qData != nullptr)
-        delete[] qData;
-    if(sampleData != nullptr)
-        delete[] sampleData;
-    if(filterData != nullptr)
-        delete[] filterData;
-}
+Utilities::~Utilities(){}
 
-float* Utilities::getQuantize()
+QList<float> Utilities::getQuantize()
 {
     if((bits == 0 && (down == 1) && (L == 1)) && (bits == _trueBits))
     {
@@ -40,9 +32,11 @@ float* Utilities::getQuantize()
         return getSampleData(true);
     }
     currentNumItems=number*(float)L/down;
-    if(qData != nullptr)
-        delete[] qData;
-    qData = new float[sizeof(float)*(currentNumItems)];
+
+    if(qData.size() != 0)
+        qData.clear();
+
+    qData.resize(currentNumItems);
     float max = 1;
     if((down == 1) && (L == 1))
     {
@@ -75,7 +69,7 @@ float* Utilities::getQuantize()
         level[i]=  -max + step * (float)i;
     }
     float index;
-    float *computeData;
+    QList<float> computeData;
     if(down>=2)
     {
        computeData=sampleData;
@@ -98,9 +92,9 @@ float* Utilities::getQuantize()
     return qData;
 }
 
-QVector<float> Utilities::getOrgQuan()
+QList<float> Utilities::getOrgQuan()
 {
-    QVector<float> qdata;
+    QList<float> qdata;
     float max = 1;
     int num = pow(2,bits);
     float step = 2 * max / (float)num;
@@ -158,8 +152,8 @@ double Utilities::computeError()
 {
     if(this->bits==0)
         return -1;
-    double* error = new double[sizeof(double)*(currentNumItems)];
-    float *computeData;
+    QList<double> error(currentNumItems);
+    QList<float> computeData;
     if(down<2)
         computeData=data;
     else
@@ -175,7 +169,7 @@ double Utilities::computeError()
     }
     varErr /= currentNumItems;
     varErr = sqrt( varErr );
-    delete[] error;
+
     return varErr;
 }
 
@@ -186,7 +180,8 @@ double Utilities::getSNR(double varErr)
         SNR=0;
         return SNR;
     }
-    float *computeData;
+
+    QList<float> computeData;
     if(down<2)
         computeData = data;
     else
@@ -208,7 +203,7 @@ void Utilities::setReplace(bool replace)
     this->replace=replace;
 }
 
-float Utilities::getMax1(float *a,int num)
+float Utilities::getMax1(const QList<float>& a,int num)
 {
     float max=a[0];
     for(int i=1;i<num;i++)
@@ -217,11 +212,11 @@ float Utilities::getMax1(float *a,int num)
     return max;
 }
 
-float* Utilities::getSampleData(bool org)
+QList<float> Utilities::getSampleData(bool org)
 {
-    if(sampleData != nullptr)
-        delete[] sampleData;
-    sampleData=(float*)malloc(sizeof(float)*currentNumItems);
+    if(sampleData.size() != 0)
+        sampleData.clear();
+    sampleData.resize(currentNumItems);
     SRC_STATE	*src_state ;
     SRC_DATA	src_data ;
     int	error ;
@@ -234,13 +229,13 @@ float* Utilities::getSampleData(bool org)
     src_data.input_frames =number;
     if(!org)
     {
-        src_data.data_in=filterData;
+        src_data.data_in = filterData.data();
     }
     else
-        src_data.data_in=data;
-    src_data.data_out=sampleData;
-    src_data.src_ratio=(double)L/down;
-    src_data.output_frames=currentNumItems;
+        src_data.data_in = data.data();
+    src_data.data_out = sampleData.data();
+    src_data.src_ratio= (double)L / down;
+    src_data.output_frames = currentNumItems;
     src_simple (&src_data,  4, 1) ;
 
    if(bits != _trueBits)
@@ -250,12 +245,12 @@ float* Utilities::getSampleData(bool org)
     return sampleData;
 }
 
-void Utilities::setFilterData(float *filterData)
+void Utilities::setFilterData(QList<float> filterData)
 {
-    this->filterData=filterData;
+    this->filterData = filterData;
 }
 
-void Utilities::updateUtilites(float *data, int number)
+void Utilities::updateUtilites(QList<float> data, int number)
 {
     this->data = data;
     this->number = number;
@@ -271,7 +266,7 @@ void Utilities::setOnlyFiltered(bool filtered)
     this->filtered = filtered;
 }
 
-const QVector<float> Utilities::getAmplitude(const QVector<float>& in)
+const QList<float> Utilities::getAmplitude(const QList<float>& in)
 {
     fftw_complex *out;
     fftw_plan p;
@@ -285,7 +280,7 @@ const QVector<float> Utilities::getAmplitude(const QVector<float>& in)
     p=fftw_plan_dft_r2c_1d(in.size(),orgIn,out,FFTW_ESTIMATE);
     fftw_execute(p);
     double real,imag;
-    QVector<float> amplitude;
+    QList<float> amplitude;
     for(int j=in.size()/2;j >= 0;j--)
     {
         real=out[j][0];
@@ -303,7 +298,7 @@ const QVector<float> Utilities::getAmplitude(const QVector<float>& in)
     fftw_free(out);
     return amplitude;
 }
-const QVector<float> Utilities::getAmplitude()
+const QList<float> Utilities::getAmplitude()
 {
     fftw_complex *out;
     fftw_plan p;
@@ -316,7 +311,7 @@ const QVector<float> Utilities::getAmplitude()
     p=fftw_plan_dft_r2c_1d(number,orgIn,out,FFTW_ESTIMATE);
     fftw_execute(p);
     double real,imag;
-    QVector<float> amplitude;
+    QList<float> amplitude;
     for(int j=number/2;j >= 0;j--)
     {
         real=out[j][0];
@@ -335,19 +330,19 @@ const QVector<float> Utilities::getAmplitude()
     return amplitude;
 }
 
-QVector<float> Utilities::getFilterData()
+QList<float> Utilities::getFilterData()
 {
-    QVector<float> tmp;
+    QList<float> tmp;
     if(_ripple <= 0 || _order >15)
         return tmp;
 
-    if(filterData != nullptr)
-        delete[] filterData;
+    if(filterData.size() != 0)
+        filterData.clear();
 
-    filterData = new float[number*sizeof(float)];
+    filterData.resize(number);
     for(int i=0;i<number;i++)
         filterData[i]=0; 
-    QVector<double> b1, a1;
+    QList<double> b1, a1;
     if(_butter)
     {
         IIR* iir=new IIR(0,_order,_factor,0,0);
@@ -362,25 +357,28 @@ QVector<float> Utilities::getFilterData()
     else
     {
         ChebyshevFilter* d=new ChebyshevFilter(1,_order,_ripple,1.0,1.0*(_factor/2),0);
-        for(int i=0;i<=_order;i++)
+        for(int i = 0; i <= _order; i++)
         {
-            b1[i]=d->pp[i];
-            a1[i]=d->aa[i];
+         //   qDebug() << i << " sdkfjhsdkfjskdljfklsd";
+            //b1[i]=d->pp[i];
+            b1.push_back(d->pp[i]);
+            //a1[i]=d->aa[i];
+            a1.push_back(d->aa[i]);
         }
         delete d;
     }
     int i,j;
-    filterData[0]=b1[0]*data[0];
-    for (i=1;i<_order+1;i++)
+    filterData[0] = b1[0] * data[0];
+    for(i = 1; i < _order + 1; i++)
     {
-        filterData[i]=0.0;
-        for (j=0;j<i+1;j++)
+        filterData[i] = 0.0;
+        for (j = 0; j <i+1; j++)
                 filterData[i]=filterData[i]+b1[j]*data[i-j];
         for (j=0;j<i;j++)
                 filterData[i]=filterData[i]-a1[j+1]*filterData[i-j-1];
     }
     /* end of initial part */
-    for (i=_order+1;i<number+1;i++)
+    for (i = _order + 1; i < number; i++)
     {
         filterData[i]=0.0;
         for (j=0;j<_order+1;j++)

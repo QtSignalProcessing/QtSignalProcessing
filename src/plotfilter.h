@@ -15,7 +15,7 @@ class plotFilter : public QWidget
 {
     Q_OBJECT
   public:
-    plotFilter(float *ria,int num,bool discrete,int sr,QVector<float>& specdata,QWidget *parent = 0);
+    plotFilter(float *ria,int num,bool discrete,int sr,QList<float>& specdata,QWidget *parent = 0);
     GLWidgetnew* getWaveWidget();
     GLSpectrum* getSpecWidget();
     QComboBox* getFilterSelect();

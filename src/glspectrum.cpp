@@ -103,7 +103,6 @@ void GLSpectrum::setScalingX(double scale)
            emit xAxisShifted(_shiftX);
            emit xAxisScaled(_xscalingF);
        }
-      //updateGL();
         update();
         return;
     }
@@ -130,7 +129,6 @@ void GLSpectrum::setScalingX(double scale)
 void GLSpectrum::show1Period(bool i)
 {
     _onePeriod = i;
-   // updateGL();
     update();
 }
 
@@ -174,14 +172,14 @@ void GLSpectrum::setDataForAliasing(QVector<float> &data)
          _dataForAliaing = data;
 }
 
-void GLSpectrum::setDataFor2Freq(QVector<float> &data)
+void GLSpectrum::setDataFor2Freq(const QList<float> &data)
 {
     if(_dataFor2Freq.size()!=0)
         _dataFor2Freq.clear();
     _dataFor2Freq = data;
 }
 
-void GLSpectrum::plotdata(const QVector<float> data)
+void GLSpectrum::plotdata(const QList<float> data)
 {
     glBegin(GL_LINE_STRIP);
     for( int i = data.size()-1; i >= 0; i-- )
@@ -191,7 +189,7 @@ void GLSpectrum::plotdata(const QVector<float> data)
            // qDebug()<<xCor<<" "<<(1-_ratio) * (double)(this->width()-_xboarder)/2<<" "<<(i-_xmin)*_xscaleF<<" "<<_xmin;
         if( xCor  * _xscalingF + _shiftX  >= _xboarder   && xCor * _xscalingF + _shiftX <= _width  )
         {
-             glVertex2f( xCor, (_Ymax-data[i]*10)*_yscaleF );
+            glVertex2f( xCor, (_Ymax-data[i]*10)*_yscaleF );
         }
     }
     glEnd();
@@ -261,7 +259,9 @@ void GLSpectrum::showSampleRange(int i)
     if(i==0)
     {
         _showRange=false;
-    }else{
+    }
+    else
+    {
         _showRange=true;
     }
     update();
@@ -331,21 +331,18 @@ void GLSpectrum::plot2Freq()
 void GLSpectrum::show2F(bool state)
 {
     _plot2Freq = state;
-  //  updateGL();
     update();
 }
 
 void GLSpectrum::conDis(bool state)
 {
     _conFirst = state;
-    //updateGL();
     update();
 }
 
 void GLSpectrum::disCon(bool state)
 {
     _conFirst = !state;
-    //updateGL();
     update();
 }
 
